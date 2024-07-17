@@ -27,19 +27,19 @@ class NBExecutor:
         with open(self.nb_name, "r", encoding="utf8") as f:
             nb: nbformat.NotebookNode = nbformat.read(f, 4)
 
-        ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
+        ep = ExecutePreprocessor(timeout=600, kernel_name="myenv")
         ep.preprocess(
             nb,
             {
                 "metadata": {
                     "kernelspec": {
-                        "display_name": ".venv",
+                        "display_name": "myenv",
                         "language": "python",
                         "name": "python3",
                     },
                     "language_info": {"name": "python", "version": "3.12.3"},
-                },
                 "path": "./generated_notebooks",
+                },
             },
         )
 
@@ -70,6 +70,6 @@ class NBExecutor:
         # Find the last code cell with output
         for cell in reversed(nb.cells):
             if cell.cell_type == "code" and cell.outputs:
-                return self.process_cell_output(cell)
+                return f'"""{self.process_cell_output(cell)}"""'
 
         return None  # If no output found

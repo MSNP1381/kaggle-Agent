@@ -9,8 +9,8 @@ class KaggleCodeExecutor:
         
         # Add initial imports
         initial_imports = """
-        import pandas as pd
-        from IPython.display import display, HTML
+import pandas as pd
+from IPython.display import display, HTML
         """
         self.nb_executor.add_nb_code_block(initial_imports)
         self.nb_executor.execute_notebook()
@@ -28,7 +28,7 @@ class KaggleCodeExecutor:
         # Get the latest output
         output = self.nb_executor.get_latest_output()
         
-        return output if output else "Code executed successfully"
+        return output if output else "#Code executed successfully\n"
 
     def get_dataframe(self, variable_name):
         # Add a code block to display the dataframe
