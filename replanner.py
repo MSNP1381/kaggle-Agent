@@ -3,7 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 class ReplanDecision(BaseModel):
     """
@@ -21,7 +21,7 @@ class ReplanDecision(BaseModel):
 class KaggleProblemReplanner:
     def __init__(self, config, proxy):
         self.config = config
-        self.llm = ChatOpenAI(model="gpt-3.5-turbo", http_client=proxy, temperature=0)
+        self.llm = ChatOpenAI(model="gpt-4o-mini", http_client=proxy, temperature=0)
         self.output_parser = PydanticOutputParser(pydantic_object=ReplanDecision)
         
         self.replan_prompt = ChatPromptTemplate.from_messages([
@@ -50,15 +50,15 @@ class KaggleProblemReplanner:
             Based on this information, should the plan be changed? If so, what should the new plan be?""")
         ])
 
-    def replan(self, state):
-        last_task = state.current_task
-        execution_result = state.task_results.get(last_task, "No result available")
+    def replan(self, state: 'KaggleProblemState') -> List[str]:
+        last_task = state.current_task.task if hasattr(state.current_task, 'task') else str(state.current_task)
+        execution_result = self._get_execution_result(state.task_results, last_task)
         current_plan = "\n".join(state.planned_tasks)
         
         response = self.llm.invoke(
             self.replan_prompt.format_messages(
                 problem_description=state.problem_description,
-                state=str(state.__dict__),
+                state=self._format_state_for_prompt(state),
                 last_task=last_task,
                 execution_result=execution_result,
                 current_plan=current_plan,
@@ -77,6 +77,24 @@ class KaggleProblemReplanner:
             print(f"Error parsing replanner output: {e}")
             return state.planned_tasks  # Fall back to current plan if parsing fails
 
+    def _get_execution_result(self, task_results: Dict[str, Any], task_name: str) -> str:
+        for key, value in task_results.items():
+            if isinstance(key, str) and key == task_name:
+                return str(value)
+            elif hasattr(key, 'task') and key.task == task_name:
+                return str(value)
+        return "No result available"
+
+    def _format_state_for_prompt(self, state: 'KaggleProblemState') -> str:
+        formatted_state = {
+            "dataset_info": state.dataset_info,
+            "previous_tasks": state.previous_tasks,
+            "model_info": state.model_info,
+            "evaluation_metric": state.evaluation_metric,
+            "best_score": state.best_score
+        }
+        return str(formatted_state)
+
 if __name__ == "__main__":
     # Example usage
     class MockState:
@@ -85,6 +103,11 @@ if __name__ == "__main__":
             self.current_task = "Perform exploratory data analysis"
             self.task_results = {"Perform exploratory data analysis": "Found high correlation between house size and price"}
             self.planned_tasks = ["Perform exploratory data analysis", "Feature engineering", "Model selection", "Model training", "Model evaluation"]
+            self.dataset_info = {}
+            self.previous_tasks = []
+            self.model_info = {}
+            self.evaluation_metric = None
+            self.best_score = None
 
     replanner = KaggleProblemReplanner(config={}, proxy=None)  # Provide appropriate config and proxy
     mock_state = MockState()

@@ -3,6 +3,7 @@ import httpx
 import pandas as pd
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
+from nbexecutor import NBExecutor
 from planner_agent import KaggleProblemPlanner
 from replanner import KaggleProblemReplanner
 from executor_agent import KaggleCodeExecutor
@@ -56,10 +57,13 @@ class KaggleProblemState:
 class KaggleProblemSolver:
     def __init__(self, config):
         self.config = config
+        print(os.getenv("HTTP_PROXY_URL"))
+        print("---"*10)
         proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
-        self.planner = KaggleProblemPlanner(config,proxy=proxy)
+        self.nb_executor=NBExecutor()
+        self.planner = KaggleProblemPlanner(config,proxy=proxy,nb_executor=self.nb_executor)
         self.replanner = KaggleProblemReplanner(config,proxy=proxy)
-        self.executor = KaggleCodeExecutor()
+        self.executor = KaggleCodeExecutor(self.nb_executor)
         self.enhancer = KaggleTaskEnhancer(config,proxy=proxy)
         self.mediator = KaggleTaskMediator(config, self.planner, self.executor, self.enhancer)
 
@@ -110,6 +114,7 @@ class KaggleProblemSolver:
 if __name__ == "__main__":
     print(".env loaded:", load_dotenv())
     langfuse_handler = CallbackHandler(
+        # httpx_client="",
         public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
         secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
         host=os.getenv("LANGFUSE_HOST"),

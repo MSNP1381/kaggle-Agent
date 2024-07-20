@@ -1,14 +1,18 @@
+from executor_agent import KaggleCodeExecutor
+from planner_agent import KaggleProblemPlanner
+from task_enhancer import KaggleTaskEnhancer
+# from agent import KaggleProblemState
 
 class KaggleTaskMediator:
-    def __init__(self, config, planner, executor, enhancer):
+    def __init__(self, config, planner:KaggleProblemPlanner, executor:KaggleCodeExecutor, enhancer:KaggleTaskEnhancer):
         self.config = config
         self.planner = planner
         self.executor = executor
         self.enhancer = enhancer
 
-    def process_task(self, task, state):
+    def process_task(self, task:str, state):
         enhanced_task = self.enhancer.enhance_task(task, state)
-        
+        state.current_task=enhanced_task
         if enhanced_task.requires_code_output:
             code = self.planner.generate_code(state)
             output = self.executor.execute_code(code)

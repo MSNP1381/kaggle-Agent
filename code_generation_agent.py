@@ -6,7 +6,15 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph, START
 from typing import List, TypedDict
 from langchain.output_parsers import PydanticOutputParser
+from nbexecutor import NBExecutor
 from utils import exec_in_venv
+""" 
+TODO
+- [ ]:  get it to make obey in form of conversational format of code and outputs like assistant human format no just in a single prompt
+# - HACK gdfgfdgdf
+
+"""
+
 
 class Code(BaseModel):
     """
@@ -52,9 +60,10 @@ class GraphState(TypedDict):
     context: str
 
 class CodeGenerationAgent:
-    def __init__(self, config, proxy, model="gpt-4o", max_iterations=3):
+    def __init__(self, config, proxy,nb_executor:NBExecutor, model="gpt-4o-mini", max_iterations=3):
         self.max_iterations = max_iterations
         self.config = config
+        self.nb_executor=nb_executor
         self.llm = ChatOpenAI(model=model, http_client=proxy, temperature=0)
         self.code_gen_prompt = ChatPromptTemplate.from_messages([
             (
@@ -118,8 +127,8 @@ class CodeGenerationAgent:
                     "The previous solution had errors. Please try again, ensuring all imports are correct and the code is executable.",
                 )
             ]
-        with open("x.json", "w", encoding="utf8") as f:    
-            json.dump({"context": state["context"], "messages": messages[-1][1], "format_instructions": self.format_instructions}, f, indent=2)
+        # with open("x.json", "w", encoding="utf8") as f:    
+        #     json.dump({"context": state["context"], "messages": messages[-1][1], "format_instructions": self.format_instructions}, f, indent=2)
         
         code_solution = self.code_gen_chain.invoke(
             {"context": state["context"], "messages": messages[-1][1], "format_instructions": self.format_instructions},
@@ -155,8 +164,11 @@ class CodeGenerationAgent:
         code = code_solution.code
 
         try:
-            exec_in_venv(imports)
-            exec_in_venv(imports + "\n" + code)
+            self.nb_executor.test_and_execute(imports)
+            # exec_in_venv(imports)
+            self.nb_executor.test_and_execute(imports + "\n" + code)
+            
+            
             print("---NO CODE TEST FAILURES---")
             return {
                 "generation": code_solution,
@@ -215,6 +227,7 @@ class CodeGenerationAgent:
 # Usage example
 if __name__ == "__main__":
     agent = CodeGenerationAgent()
+    
     context = "We are working on a Kaggle problem involving image classification."
     task = "Create a function to load and preprocess image data using PIL and numpy."
     final_code = agent.generate_code(context, task)

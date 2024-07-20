@@ -3,15 +3,12 @@ from IPython.display import display, HTML
 from nbexecutor import NBExecutor  # Assuming NBExecutor is in a file named nbexecutor.py
 
 class KaggleCodeExecutor:
-    def __init__(self):
-        self.nb_executor = NBExecutor()
+    def __init__(self,nb_executor):
+        self.nb_executor = nb_executor
         self.nb_executor.create_nb()
         
         # Add initial imports
-        initial_imports = """
-import pandas as pd
-from IPython.display import display, HTML
-        """
+        initial_imports = """import pandas as pd\nfrom IPython.display import display, HTML"""
         self.nb_executor.add_nb_code_block(initial_imports)
         self.nb_executor.execute_notebook()
 
@@ -32,7 +29,7 @@ from IPython.display import display, HTML
 
     def get_dataframe(self, variable_name):
         # Add a code block to display the dataframe
-        display_code = f"display({variable_name})"
+        display_code = f'print("""\n{variable_name}\n""")'
         self.nb_executor.add_nb_code_block(display_code)
         self.nb_executor.execute_notebook()
         
@@ -41,7 +38,7 @@ from IPython.display import display, HTML
 
     def get_variable(self, variable_name):
         # Add a code block to print the variable
-        print_code = f"print({variable_name})"
+        print_code = f'print("""\n{variable_name}""")'
         self.nb_executor.add_nb_code_block(print_code)
         self.nb_executor.execute_notebook()
         

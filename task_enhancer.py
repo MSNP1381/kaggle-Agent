@@ -14,7 +14,7 @@ class EnhancedTask(BaseModel):
 class KaggleTaskEnhancer:
     def __init__(self, config, proxy):
         self.config = config
-        self.llm = ChatOpenAI(model="gpt-3.5-turbo", http_client=proxy, temperature=0)
+        self.llm = ChatOpenAI(model="gpt-4o-mini", http_client=proxy, temperature=0)
 
         self.task_enhancement_prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an AI assistant specialized in enhancing and evaluating Kaggle machine learning tasks. 
@@ -46,7 +46,7 @@ class KaggleTaskEnhancer:
             Current Task: {task}
 
             Project State:
-            - Dataset Info: {dataset_info}
+            - Dataset I-nfo: {dataset_info}
             - Previous Tasks: {previous_tasks}
             - Task Results: {task_results}
             - Model Info: {model_info}
