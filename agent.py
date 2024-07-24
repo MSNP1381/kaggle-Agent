@@ -140,7 +140,7 @@ if __name__ == "__main__":
     t=graph.get_graph(xray=2).draw_mermaid_png(output_file_path="agentVis.png")
     with open("x.txt",'w') as f:
         f.write(t)
-    exit()
+    # exit()
     # exit()
     res=solver.invoke()
     print(res)
