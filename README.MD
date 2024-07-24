@@ -32,27 +32,7 @@ It's like a never-ending dance party, but with more algorithms and less awkward 
 
 Behold, the pièce de résistance of our project – the Agent Graph! 📊
 
-```mermaid
-%%{init: {'flowchart': {'curve': 'linear'}}}%%
-graph TD;
- __start__[__start__]:::startclass;
- __end__[__end__]:::endclass;
- code_agent([code_agent]):::otherclass;
- planner([planner]):::otherclass;
- executor([executor]):::otherclass;
- enhancer([enhancer]):::otherclass;
- data_utils([data_utils]):::otherclass;
- __start__ --> data_utils;
- code_agent --> executor;
- data_utils --> planner;
- enhancer --> code_agent;
- planner --> enhancer;
- executor -.-> __end__;
- executor -.-> enhancer;
- classDef startclass fill:#ffdfba;
- classDef endclass fill:#baffc9;
- classDef otherclass fill:#fad7de;
-```
+![agent visualization](assets/agentVis.png)
 
 This isn't just any graph – it's a visual symphony of our agents working in harmony. Watch as data flows through our system like a well-choreographed ballet of bits and bytes!
 
@@ -61,7 +41,7 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
 1. Clone this repo faster than you can say "git":
 
    ```
-   git clone https://github.com/your-username/kaggle-problem-solver.git
+   git clone https://github.com/msnp1381/kaggle-problem-solver.git
    ```
 
 2. Let Poetry work its magic:
