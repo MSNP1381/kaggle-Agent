@@ -3,13 +3,9 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 
-class EnhancedTask(BaseModel):
-    task: str = Field(description="The original task description", default="No Task provided")
-    enhanced_description: str = Field(description="An enhanced and more detailed description of the task", default="no enhancement")
-    requires_code_output: bool = Field(description="Whether this task requires code execution and output", default=False)
-    expected_output_type: str = Field(description="The expected type of output if code execution is required (e.g., 'dataframe', 'plot', 'metric', 'model')", default="No Expected Output")
-    dependencies: list = Field(description="List of tasks that this task depends on", default_factory=list)
-    estimated_time: str = Field(description="Estimated time to complete this task", default="Unknown")
+from states.enhancer import EnhancedTask
+from states.main import KaggleProblemState
+
 
 class KaggleTaskEnhancer:
     def __init__(self, config, proxy):
@@ -47,8 +43,7 @@ class KaggleTaskEnhancer:
 
             Project State:
             - Dataset I-nfo: {dataset_info}
-            - Previous Tasks: {previous_tasks}
-            - Task Results: {task_results}
+            - Tasks Results: {task_results}
             - Model Info: {model_info}
             - Planned Tasks: {planned_tasks}
             - Evaluation Metric: {evaluation_metric}
@@ -58,21 +53,31 @@ class KaggleTaskEnhancer:
             """)
         ])
 
-    def enhance_task(self, task, state):
+    def enhance_task(self, task, state:KaggleProblemState):
         output_parser = PydanticOutputParser(pydantic_object=EnhancedTask)
         format_instructions = output_parser.get_format_instructions()
-        
-        response = (self.task_enhancement_prompt | self.llm).invoke({
+
+        response = (self.task_enhancement_prompt | self.llm | output_parser).invoke({
             'task': task,
             'problem_description': state.problem_description,
             'dataset_info': str(state.dataset_info),
-            'previous_tasks': str(state.previous_tasks),
-            'task_results': str(state.task_results),
+            # 'previous_tasks': str(state.previous_tasks),
+            'task_results': state.get_task_results(),
             'model_info': str(state.model_info),
             'planned_tasks': str(state.planned_tasks),
             'evaluation_metric': state.evaluation_metric,
             'best_score': state.best_score,
             'format_instructions': format_instructions
         }, config=self.config)
-        
-        return output_parser.invoke(response)
+
+        return response
+
+    def __call__(self, state: KaggleProblemState):
+        task = state.planned_tasks.pop(0)
+
+        enhanced_task = self.enhance_task(task, state)
+
+        return {
+            "planned_tasks": state.planned_tasks,
+            'enhanced_task': enhanced_task
+        }

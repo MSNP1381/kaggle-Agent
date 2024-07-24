@@ -163,3 +163,4 @@ cython_debug/
 .vscode/
 generated_notebooks/*
 ./*.pkl
+x.png

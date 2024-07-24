@@ -5,7 +5,10 @@ from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-class ReplanDecision(BaseModel):
+from states.main import KaggleProblemState
+
+
+class RePlanDecision(BaseModel):
     """
     Represents the decision made by the replanner.
 
@@ -18,15 +21,17 @@ class ReplanDecision(BaseModel):
     new_plan: Optional[List[str]] = Field(description="The new plan if changes are needed", default=None)
     reasoning: str = Field(description="The reasoning behind the decision")
 
-class KaggleProblemReplanner:
+
+class KaggleProblemRePlanner:
     def __init__(self, config, proxy):
         self.config = config
         self.llm = ChatOpenAI(model="gpt-4o-mini", http_client=proxy, temperature=0)
-        self.output_parser = PydanticOutputParser(pydantic_object=ReplanDecision)
-        
-        self.replan_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an AI assistant tasked with replanning a Kaggle machine learning project based on the latest execution results.
-            Given the current state of the project and the output of the last executed task, determine if the plan needs to be adjusted.
+        self.output_parser = PydanticOutputParser(pydantic_object=RePlanDecision)
+
+        self.re_plan_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are an AI assistant tasked with re planning a Kaggle machine learning project based on 
+            the latest execution results. Given the current state of the project and the output of the last executed 
+            task, determine if the plan needs to be adjusted.
 
             Analyze the execution result carefully and determine if it requires changes to the plan.
             If changes are needed, provide a new list of planned tasks.
@@ -34,7 +39,8 @@ class KaggleProblemReplanner:
 
             {format_instructions}
 
-            Ensure your response includes a clear decision on whether changes are needed, the reasoning behind your decision, and a new plan if applicable."""),
+            Ensure your response includes a clear decision on whether changes are needed, the reasoning behind your 
+            decision, and a new plan if applicable."""),
             ("human", """Problem Description:
             {problem_description}
 
@@ -50,13 +56,13 @@ class KaggleProblemReplanner:
             Based on this information, should the plan be changed? If so, what should the new plan be?""")
         ])
 
-    def replan(self, state: 'KaggleProblemState') -> List[str]:
-        last_task = state.current_task.task if hasattr(state.current_task, 'task') else str(state.current_task)
+    def re_plan(self, state: KaggleProblemState) -> List[str]:
+        last_task = state.enhanced_task.task if hasattr(state.enhanced_task, 'task') else str(state.enhanced_task)
         execution_result = self._get_execution_result(state.task_results, last_task)
         current_plan = "\n".join(state.planned_tasks)
-        
+
         response = self.llm.invoke(
-            self.replan_prompt.format_messages(
+            self.re_plan_prompt.format_messages(
                 problem_description=state.problem_description,
                 state=self._format_state_for_prompt(state),
                 last_task=last_task,
@@ -95,21 +101,3 @@ class KaggleProblemReplanner:
         }
         return str(formatted_state)
 
-if __name__ == "__main__":
-    # Example usage
-    class MockState:
-        def __init__(self):
-            self.problem_description = "Predict house prices"
-            self.current_task = "Perform exploratory data analysis"
-            self.task_results = {"Perform exploratory data analysis": "Found high correlation between house size and price"}
-            self.planned_tasks = ["Perform exploratory data analysis", "Feature engineering", "Model selection", "Model training", "Model evaluation"]
-            self.dataset_info = {}
-            self.previous_tasks = []
-            self.model_info = {}
-            self.evaluation_metric = None
-            self.best_score = None
-
-    replanner = KaggleProblemReplanner(config={}, proxy=None)  # Provide appropriate config and proxy
-    mock_state = MockState()
-    new_plan = replanner.replan(mock_state)
-    print("New plan:", new_plan)
