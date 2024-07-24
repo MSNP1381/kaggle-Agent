@@ -1,10 +1,18 @@
 # 🚀 Kaggle Problem Solver: Your AI-Powered ML Sidekick
 
 > Note that because of nature of project it could be very dependant to iterarions and no plan is strait forward for this type of projects.
-> 
+>
+## TODO
+
+- [ ] Add Dockerization for code Executor
+- [ ] Explainablity
+- [ ] Logging
+- [ ] Getting formatted evaluation and code execution result without execution
+- [ ] adding code generation to graph
+
 ## 🌟 Overview
 
-Welcome to the Kaggle Problem Solver, the Swiss Army knife of machine learning challenges! This isn't just any old problem solver – it's your AI-powered companion in the wild world of Kaggle competitions. Using a "plan and execute" strategy that would make any project manager jealous, our system tackles ML problems with the finesse of a seasoned data scientist and the tireless energy of a thousand interns.
+Welcome to the Kaggle Problem Solver, the Swiss Army knife of machine learning challenges! This isn't just any old problem solver – it's your AI-powered companion in the wild world of Kaggle competitions. Using a "plan and execute" strategy that would make any project manager jealous, our system tackles ML problems with the finesse of a seasoned data scientist and the tireless energy of a thousand interns. **code generation agent is inspired from langgraph agent [<u>link</u>](https://blog.langchain.dev/code-execution-with-langgraph/)**
 
 ## 🧠 Key Components
 
