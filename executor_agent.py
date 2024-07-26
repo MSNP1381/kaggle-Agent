@@ -53,7 +53,7 @@ class KaggleCodeExecutor:
 
     def __call__(self, state: KaggleProblemState):
         enhanced_task = state.enhanced_task
-        code = state.task_codes_results[enhanced_task.task][0]
+        code = state.task_codes_results[enhanced_task.task][1]
         output = self.execute_code(code)
 
         if enhanced_task.requires_code_output:
@@ -65,6 +65,14 @@ class KaggleCodeExecutor:
             elif enhanced_task.expected_output_type in ["plot", "metric", "model"]:
                 output = self.get_variable(output)
 
-        state.task_codes_results[enhanced_task.task] = (code, str(output))
+        # state.task_codes_results[enhanced_task.task] = (
+        #     enhanced_task,
+        #     code,
+        #     str(output),
+        # )
 
-        return {"task_codes_results": state.task_codes_results}
+        return {
+            "task_codes_results": {
+                enhanced_task.task: (enhanced_task, code, str(output))
+            }
+        }

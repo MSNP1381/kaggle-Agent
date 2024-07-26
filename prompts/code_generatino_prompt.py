@@ -12,8 +12,6 @@ Analyze the following context carefully:
 -------
 Problem Description: {problem_description}
 Project State: {project_state}
-Previous Task-Code Pairs:
-{task_code_pairs}
 -------
 Use this context to inform your code generation, ensuring relevance and appropriateness.
 
@@ -56,12 +54,10 @@ Analyze the task requirements for any output-related instructions. Requirements 
 If no output requirements are specified, focus on core task implementation without additional output code.
 
 8. Output Format:
-Adhere strictly to the following output format:
-{format_instructions}
 
 Remember, your goal is to provide a comprehensive, error-free, and executable solution that directly addresses the user's task while leveraging and building upon existing task-code pairs. Provide only the code without additional explanations unless specifically requested in the task.
 """,
         ),
-        ("human", "{current_task_desc}"),
+        ("placeholder", "{conversation}")
     ]
 )

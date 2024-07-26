@@ -52,23 +52,23 @@ class Code(BaseModel):
         return f"{self.imports}\n{self.code}"
 
 
-@dataclass
-class KaggleProblemState:
+
+class KaggleProblemState(BaseModel):
     problem_description: str
     dataset_path: str = ""
 
-    dataset_info: str = field(default_factory=str)
+    dataset_info: str = Field(default_factory=str)
     current_task: str = ""
-    previous_tasks: Annotated[List[str], add] = field(default_factory=list)
-    task_codes_results: Annotated[Dict[str, Tuple[Code, str]], dict_concat] = field(
-        default_factory=dict
-    )
+    # previous_tasks: Annotated[List[str], add] = field(default_factory=list)
+    task_codes_results: Annotated[
+        Dict[str, Tuple[EnhancedTask, Code, str]], dict_concat
+    ] = Field(default_factory=dict)
     # task_results: Dict[str, Any] = field(default_factory=dict)
-    model_info: Dict[str, Any] = field(default_factory=dict)
-    planned_tasks: List[str] = field(default_factory=list)
-    evaluation_metric: Optional[str] = None
-    best_score: Optional[float] = None
-    enhanced_task: EnhancedTask = None
+    model_info: Dict[str, Any] = Field(default_factory=dict)
+    planned_tasks: List[str] = Field(default_factory=list)
+    evaluation_metric: Optional[str] = Field(default=None)
+    best_score: Optional[float] = Field(default=None)
+    enhanced_task: EnhancedTask = Field(default=None)
 
     def update_task(self, task: str):
         if self.current_task:
@@ -91,17 +91,17 @@ class KaggleProblemState:
     def get_task_results(self):
         l = []
         for task, cr in self.task_codes_results.items():
-            (code, result) = cr
+            (enh_task, code, result) = cr
             l.append(
                 f"""
             task description : 
             `
-            {task}
+            {enh_task}
             `
             ---------------------------------------
             generated code :
             ``` python
-            {code}
+            {str(code)}
             ```
             ---------------------------------------- 
             output result :

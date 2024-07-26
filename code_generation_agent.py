@@ -63,7 +63,7 @@ class CodeGenerationAgent:
                 )
             )
 
-        human_message = messages[-1][1]  # Get the latest human message
+        human_message = messages  # Get the latest human message
 
         # Prepare task requirements string
         # task_requirements = "\n".join(enhanced_task.get("requirements", []))
@@ -71,8 +71,8 @@ class CodeGenerationAgent:
         code_solution = self.code_gen_chain.invoke(
             {
                 **state["context"],
-                "current_task_desc": human_message,
-                "format_instructions": self.format_instructions,
+                "conversation": human_message,
+                # "format_instructions": self.format_instructions,
             },
             config=self.config,
         )
@@ -172,8 +172,11 @@ class CodeGenerationAgent:
         task_code_pairs_formatted = []
         index = 1
         for i, j in state.task_codes_results.items():
-            task_code_pairs_formatted.append(
-                f"""
+            (enh_task, code, res) = j
+            task_code_pairs_formatted += [
+                (
+                    "human",
+                    f"""
 *************
 task No.{index}
 
@@ -182,41 +185,51 @@ Task:
 {i}
 
 ---------------------
+Requirements:
+{"\n".join(enh_task.requirements) }
 
-Code :
+""",
+                ),
+                (
+                    "assistant",
+                    f"""Code :
 
-{j[0]}
+{code}
 
 ---------------------
 
 Result:
 
-{j[1]}
-*************
-"""
-            )
+{res}
+*************""",
+                ),
+            ]
+
             index += 1
-        messages = [
+
+        # for i in state.task_codes_results
+
+        task_code_pairs_formatted += [
             (
                 "human",
-                f"Current Task :\n{state.enhanced_task.task}\n\nTask Requirements:\n{state.enhanced_task.requirements}",
+                f"Current Task :\n{state.enhanced_task.task}\n\nTask Requirements:\n{state.enhanced_task.requirements}\n\nAdhere strictly to the following output format: \n {self.format_instructions}",
             )
         ]
+
         context = {
             "problem_description": state.problem_description,
             "project_state": {
                 "dataset_info": state.dataset_info,
-                "current_task": state.enhanced_task.task,
+                # "current_task": state.enhanced_task.task,
                 "model_info": state.model_info,
                 "planned_tasks": state.planned_tasks,
                 "evaluation_metric": state.evaluation_metric,
                 "best_score": state.best_score,
             },
-            "task_code_pairs": "\n".join(task_code_pairs_formatted),
         }
 
         initial_state = {
-            "messages": messages,
+            "messages": task_code_pairs_formatted,
             "iterations": 0,
             "context": context,
             "error": "no",
@@ -225,14 +238,20 @@ Result:
         }
         Path("log.txt").touch()
         with open("log.txt", "a") as f:
-            
+
             f.write(
                 str(orjson.dumps(initial_state, default=encode_json), encoding="utf8")
             )
             f.write("\n\n************************************************\n\n\n")
         result = self.workflow.invoke(initial_state, config=self.config)
         return {
-            "task_codes_results": {state.enhanced_task.task: (result["generation"], "")}
+            "task_codes_results": {
+                state.enhanced_task.task: (
+                    state.enhanced_task,
+                    result["generation"],
+                    "",
+                )
+            }
         }
 
     def _conv(self, state):

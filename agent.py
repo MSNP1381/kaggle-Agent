@@ -88,7 +88,7 @@ class KaggleProblemSolver:
         self.graph = graph_builder.compile()
         return self.graph
 
-    def invoke(self,debug=True):
+    def invoke(self, debug=True):
         state = self._init_state()
         # self.graph.astream_log
         return self.graph.invoke(state, config=self.config, debug=debug)

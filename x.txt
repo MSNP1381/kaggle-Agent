@@ -1,0 +1,19 @@
+%%{init: {'flowchart': {'curve': 'linear'}}}%%
+graph TD;
+	__start__([__start__]):::first
+	code_agent(code_agent)
+	planner(planner)
+	executor(executor)
+	enhancer(enhancer)
+	data_utils(data_utils)
+	__end__([__end__]):::last
+	__start__ --> data_utils;
+	code_agent --> executor;
+	data_utils --> planner;
+	enhancer --> code_agent;
+	planner --> enhancer;
+	executor -.-> __end__;
+	executor -.-> enhancer;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
