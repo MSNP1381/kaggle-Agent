@@ -1,4 +1,3 @@
-
 import json
 from typing import Any, Dict
 import pandas as pd
@@ -20,7 +19,9 @@ class KaggleDataUtils:
         """
         self.config = config
         self.llm = ChatOpenAI(model="gpt-4o-mini", http_client=proxy, temperature=0)
-        self.dataset_analysis_prompt = ChatPromptTemplate.from_template(DATASET_ANALYSIS_PROMPT)
+        self.dataset_analysis_prompt = ChatPromptTemplate.from_template(
+            DATASET_ANALYSIS_PROMPT
+        )
 
     def analyze_dataset(self, dataset: pd.DataFrame) -> Dict[str, Any]:
         """
@@ -34,9 +35,12 @@ class KaggleDataUtils:
         """
         try:
             dataset_overview = self._generate_dataset_overview(dataset)
-            response = self.llm.invoke(self.dataset_analysis_prompt.format_messages(
-                dataset_overview=dataset_overview
-            ), config=self.config)
+            response = self.llm.invoke(
+                self.dataset_analysis_prompt.format_messages(
+                    dataset_overview=dataset_overview
+                ),
+                config=self.config,
+            )
 
             result = self._parse_response(response.content)
             return result
@@ -54,8 +58,13 @@ class KaggleDataUtils:
         Returns:
             str: A string representation of the dataset overview.
         """
-        overview = [f"Shape: {dataset.shape}", f"Columns: {dataset.columns.tolist()}", f"Data Types:\n{dataset.dtypes}",
-                    f"Missing Values:\n{dataset.isnull().sum()}", f"Unique Values:\n{dataset.nunique()}"]
+        overview = [
+            f"Shape: {dataset.shape}",
+            f"Columns: {dataset.columns.tolist()}",
+            f"Data Types:\n{dataset.dtypes}",
+            f"Missing Values:\n{dataset.isnull().sum()}",
+            f"Unique Values:\n{dataset.nunique()}",
+        ]
         return "\n".join(overview)
 
     def _parse_response(self, response_content: str) -> Dict[str, Any]:
@@ -74,14 +83,10 @@ class KaggleDataUtils:
         description = "\n".join(lines[:-1])
         preprocessing_steps = lines[-1].split(";")
 
-        return {
-            "description": description,
-            "preprocessing_steps": preprocessing_steps
-        }
+        return {"description": description, "preprocessing_steps": preprocessing_steps}
 
     def __call__(self, state: KaggleProblemState):
 
         result = self.analyze_dataset(pd.read_csv(state.dataset_path))
 
-        return {'dataset_info': json.dumps(result, indent=1)}
-
+        return {"dataset_info": json.dumps(result, indent=1)}

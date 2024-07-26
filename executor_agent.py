@@ -1,6 +1,8 @@
 import pandas as pd
 from IPython.display import display, HTML
-from nbexecutor import NBExecutor  # Assuming NBExecutor is in a file named nbexecutor.py
+from nbexecutor import (
+    NBExecutor,
+)  # Assuming NBExecutor is in a file named nbexecutor.py
 from states.main import KaggleProblemState
 
 
@@ -10,7 +12,9 @@ class KaggleCodeExecutor:
         self.nb_executor.create_nb()
 
         # Add initial imports
-        initial_imports = """import pandas as pd\nfrom IPython.display import display, HTML"""
+        initial_imports = (
+            """import pandas as pd\nfrom IPython.display import display, HTML"""
+        )
         self.nb_executor.add_nb_code_block(initial_imports)
         self.nb_executor.execute_notebook()
 
@@ -56,11 +60,11 @@ class KaggleCodeExecutor:
 
             # output = self.executor.execute_code(code)
 
-            if enhanced_task.expected_output_type == 'dataframe':
+            if enhanced_task.expected_output_type == "dataframe":
                 output = self.get_dataframe(output)
-            elif enhanced_task.expected_output_type in ['plot', 'metric', 'model']:
+            elif enhanced_task.expected_output_type in ["plot", "metric", "model"]:
                 output = self.get_variable(output)
 
         state.task_codes_results[enhanced_task.task] = (code, str(output))
 
-        return {'task_codes_results': state.task_codes_results}
+        return {"task_codes_results": state.task_codes_results}

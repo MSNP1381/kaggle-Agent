@@ -43,7 +43,9 @@ class Code(BaseModel):
     """
 
     imports: str = Field(description="Imports required for the solution.")
-    code: str = Field(description="Code for the solution", default="#no Code for this task")
+    code: str = Field(
+        description="Code for the solution", default="#no Code for this task"
+    )
     description: str = Field(description="Description for the solution.")
 
     def __str__(self):
@@ -58,7 +60,9 @@ class KaggleProblemState:
     dataset_info: str = field(default_factory=str)
     current_task: str = ""
     previous_tasks: Annotated[List[str], add] = field(default_factory=list)
-    task_codes_results: Annotated[Dict[str, Tuple[Code, str]], dict_concat] = field(default_factory=dict)
+    task_codes_results: Annotated[Dict[str, Tuple[Code, str]], dict_concat] = field(
+        default_factory=dict
+    )
     # task_results: Dict[str, Any] = field(default_factory=dict)
     model_info: Dict[str, Any] = field(default_factory=dict)
     planned_tasks: List[str] = field(default_factory=list)
@@ -83,11 +87,13 @@ class KaggleProblemState:
 
     def set_evaluation_metric(self, metric: str):
         self.evaluation_metric = metric
+
     def get_task_results(self):
-        l=[]
-        for task,cr in self.task_codes_results.items():
-            (code,result)=cr
-            l.append(f"""
+        l = []
+        for task, cr in self.task_codes_results.items():
+            (code, result) = cr
+            l.append(
+                f"""
             task description : 
             `
             {task}
@@ -102,5 +108,6 @@ class KaggleProblemState:
             `
             {result}
             `
-            """)
+            """
+            )
         return "\n\n".join(l)

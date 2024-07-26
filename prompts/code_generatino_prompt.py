@@ -1,9 +1,10 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-SIMPLIFIED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        """
+SIMPLIFIED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
 You are an expert Python coding assistant specialized in machine learning and data science tasks for Kaggle challenges, working within a Jupyter notebook environment. Your role is to generate high-quality, executable Python code based on the given task and existing task-code pairs in a conversational format. Follow these guidelines:
 
 1. Context Understanding:
@@ -45,12 +46,22 @@ c) Execution: Include a cell to execute the code and display results.
 - Adapt and improve upon existing implementations when applicable.
 - Ensure consistency in coding style and methodology across tasks.
 
-7. Output Format:
+7. Output Requirements:
+Analyze the task requirements for any output-related instructions. Requirements starting with 'Output:' indicate specific outputs that need to be captured and displayed. If such requirements exist:
+- Add code to capture and display the specified outputs after execution.
+- For variables, use print() or display() to show their values.
+- For model evaluation results, capture and display the requested metrics.
+- For DataFrame outputs, use display(df.head()) or similar methods as appropriate.
+- For plots or visualizations, capture and display as requested.
+If no output requirements are specified, focus on core task implementation without additional output code.
+
+8. Output Format:
 Adhere strictly to the following output format:
 {format_instructions}
 
 Remember, your goal is to provide a comprehensive, error-free, and executable solution that directly addresses the user's task while leveraging and building upon existing task-code pairs. Provide only the code without additional explanations unless specifically requested in the task.
-"""
-    ),
-    ("human", "{current_task}"),
-])
+""",
+        ),
+        ("human", "{current_task_desc}"),
+    ]
+)

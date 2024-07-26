@@ -12,6 +12,7 @@ import os
 from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
+
 # from states.
 from datautils import KaggleDataUtils
 
@@ -23,8 +24,13 @@ class KaggleProblemSolver:
         print("---" * 10)
         self.proxy = proxy
         self.nb_executor = NBExecutor()
-        self.code_agent = CodeGenerationAgent(config, proxy=proxy, nb_executor=self.nb_executor)
-        self.planner = KaggleProblemPlanner(config, proxy=proxy, )
+        self.code_agent = CodeGenerationAgent(
+            config, proxy=proxy, nb_executor=self.nb_executor
+        )
+        self.planner = KaggleProblemPlanner(
+            config,
+            proxy=proxy,
+        )
         self.re_planner = KaggleProblemRePlanner(config, proxy=proxy)
         self.executor = KaggleCodeExecutor(self.nb_executor)
         self.enhancer = KaggleTaskEnhancer(config, proxy=proxy)
@@ -41,16 +47,24 @@ class KaggleProblemSolver:
     """
 
         return {
-            'problem_description': self.problem_description,
-            'dataset_path': self.dataset_path,
+            "problem_description": self.problem_description,
+            "dataset_path": self.dataset_path,
         }
 
         # dataset_path = "house_prices.csv"  # Replace with actual path
 
     def is_plan_done(self, state: KaggleProblemState):
+        # print("******************" * 2)
+        # print("\n\n")
+        # print("planned task no is:")
+        # print(state.planned_tasks.__len__())
+        # if state.planned_tasks.__len__() < 2 or True:
+        #     print(*state.planned_tasks, sep="**\n\n")
+        # print("\n\n")
+        # print("******************" * 2)
         if not state.planned_tasks:
             return END
-        return 'enhancer'
+        return "enhancer"
 
     def compile(self):
         graph_builder = StateGraph(KaggleProblemState)
@@ -62,24 +76,25 @@ class KaggleProblemSolver:
         graph_builder.add_node("data_utils", self.data_utils)
 
         graph_builder.add_edge(START, "data_utils")
-        graph_builder.add_edge('data_utils', "planner")
-        graph_builder.add_edge('planner', "enhancer")
+        graph_builder.add_edge("data_utils", "planner")
+        graph_builder.add_edge("planner", "enhancer")
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
-        
+
         graph_builder.add_edge("enhancer", "code_agent")
         graph_builder.add_edge("code_agent", "executor")
-        graph_builder.add_conditional_edges("executor", self.is_plan_done,path_map={
-            END:END,
-            'enhancer':'enhancer'
-        })
-        self.graph=graph_builder.compile()
+        graph_builder.add_conditional_edges(
+            "executor", self.is_plan_done, path_map={END: END, "enhancer": "enhancer"}
+        )
+        self.graph = graph_builder.compile()
         return self.graph
-    def invoke(self):
-        state=self._init_state()
+
+    def invoke(self,debug=True):
+        state = self._init_state()
         # self.graph.astream_log
-        return self.graph.invoke(state,config=self.config,debug=True)
-        
+        return self.graph.invoke(state, config=self.config, debug=debug)
+
         #
+
     # def replan(self,state: KaggleProblemState):
     #
 
@@ -131,20 +146,19 @@ if __name__ == "__main__":
         public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
         secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
         host=os.getenv("LANGFUSE_HOST"),
-        session_id=f"session-{int(time.time())}"
+        session_id=f"session-{int(time.time())}",
     )
     # r=KaggleProblemState()
-    config = {"callbacks": [langfuse_handler]}
+    config = {"callbacks": [langfuse_handler], "recursion_limit": 50}
     solver = KaggleProblemSolver(config, proxy)
-    graph=solver.compile()
-    t=graph.get_graph(xray=2).draw_mermaid()
-    with open("x.txt",'w') as f:
+    graph = solver.compile()
+    t = graph.get_graph(xray=2).draw_mermaid()
+    with open("x.txt", "w") as f:
         f.write(t)
-    exit()
     # exit()
-    res=solver.invoke()
+    res = solver.invoke()
     print(res)
-    
+
     # problem_description = """
     # Predict house prices based on various features.
     # The evaluation metric is Root Mean Squared Error (RMSE).

@@ -12,8 +12,11 @@ class KaggleTaskEnhancer:
         self.config = config
         self.llm = ChatOpenAI(model="gpt-4o-mini", http_client=proxy, temperature=0)
 
-        self.task_enhancement_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an AI assistant specialized in enhancing and evaluating Kaggle machine learning tasks. 
+        self.task_enhancement_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """You are an AI assistant specialized in enhancing and evaluating Kaggle machine learning tasks. 
             Your goal is to provide detailed, actionable task descriptions that align with the current state of the project.
 
             When analyzing a task, consider the following aspects of the project state:
@@ -33,10 +36,14 @@ class KaggleTaskEnhancer:
             - Build upon previous tasks and their results
             - Consider the current state of the project and dataset
             - Provide clear guidance on what needs to be done and why
+            - Provide wethere outputs are reqired for this task or not which can be executed by code   
 
             {format_instructions}
-            """),
-            ("human", """
+            """,
+                ),
+                (
+                    "human",
+                    """
             Problem Description: {problem_description}
 
             Current Task: {task}
@@ -50,25 +57,30 @@ class KaggleTaskEnhancer:
             - Best Score: {best_score}
 
             Based on this information, please enhance the task description and determine its requirements.
-            """)
-        ])
+            """,
+                ),
+            ]
+        )
 
-    def enhance_task(self, task, state:KaggleProblemState):
+    def enhance_task(self, task, state: KaggleProblemState):
         output_parser = PydanticOutputParser(pydantic_object=EnhancedTask)
         format_instructions = output_parser.get_format_instructions()
 
-        response = (self.task_enhancement_prompt | self.llm | output_parser).invoke({
-            'task': task,
-            'problem_description': state.problem_description,
-            'dataset_info': str(state.dataset_info),
-            # 'previous_tasks': str(state.previous_tasks),
-            'task_results': state.get_task_results(),
-            'model_info': str(state.model_info),
-            'planned_tasks': str(state.planned_tasks),
-            'evaluation_metric': state.evaluation_metric,
-            'best_score': state.best_score,
-            'format_instructions': format_instructions
-        }, config=self.config)
+        response = (self.task_enhancement_prompt | self.llm | output_parser).invoke(
+            {
+                "task": task,
+                "problem_description": state.problem_description,
+                "dataset_info": str(state.dataset_info),
+                # 'previous_tasks': str(state.previous_tasks),
+                "task_results": state.get_task_results(),
+                "model_info": str(state.model_info),
+                "planned_tasks": str(state.planned_tasks),
+                "evaluation_metric": state.evaluation_metric,
+                "best_score": state.best_score,
+                "format_instructions": format_instructions,
+            },
+            config=self.config,
+        )
 
         return response
 
@@ -77,7 +89,4 @@ class KaggleTaskEnhancer:
 
         enhanced_task = self.enhance_task(task, state)
 
-        return {
-            "planned_tasks": state.planned_tasks,
-            'enhanced_task': enhanced_task
-        }
+        return {"planned_tasks": state.planned_tasks, "enhanced_task": enhanced_task}

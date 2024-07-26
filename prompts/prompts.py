@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 
-PLANNER_PROMPT="""
+PLANNER_PROMPT = """
 You are an AI assistant tasked with solving a Kaggle machine learning problem. Your goal is to create or update a detailed plan to solve the problem based on the provided information.
 
 Problem Description:
@@ -27,6 +27,10 @@ Notes:
 - Do not call the plt.show() method for plots in the code.
 - Do not use any visually formatted outputs like rendered HTML; use text or dictionaries for outputs.
 - Take into account the current state, including results from previous tasks and existing variables.
+- You must be consistent and structured.
 
-Respond with a list of planned tasks, each on a new line, with sufficient detail to guide subsequent steps.
+formated instruction : is as follow
+{format_instructions}
+
+Provide sufficient detail in each task to guide subsequent steps.
 """

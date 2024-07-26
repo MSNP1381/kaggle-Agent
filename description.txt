@@ -1,5 +1,5 @@
-this is a problem solving agent fro kaggle ml problems by using method of plan and execute.
-1- planner by problem description and dataset information palns to solve problem step by step tasks
-2- enhancer enhances task of planner by adding requirement for output and adding more information to task
-3- code generation agent executes enhanced task with context and previous tasks,codes and outputs and adds and executes in note book
-4- replanner based on plan, problem description and output of executions, executed tasks replans the paln provided by planner and updates remaining plan to new plan and sends it  to enhancer 
+    this is a problem solving agent fro kaggle ml problems by using method of plan and execute.
+    1- planner by problem description and dataset information palns to solve problem step by step tasks
+    2- enhancer enhances task of planner by adding requirement for output and adding more information to task
+    3- code generation agent executes enhanced task with context and previous tasks,codes and outputs and adds and executes in note book
+    4- replanner based on plan, problem description and output of executions, executed tasks replans the paln provided by planner and updates remaining plan to new plan and sends it  to enhancer 

@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+import orjson
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph, START
 from typing import List, TypedDict
@@ -8,6 +11,13 @@ from nbexecutor import NBExecutor
 from prompts.code_generatino_prompt import SIMPLIFIED_CODE_GEN_PROMPT
 from states.main import Code
 
+# from utils import encode_json
+
+
+def encode_json(obj):
+    if isinstance(obj, Code):
+        return str(obj)
+
 
 class GraphState(TypedDict):
     error: str
@@ -15,7 +25,8 @@ class GraphState(TypedDict):
     generation: Code
     iterations: int
     context: str
-    enhanced_task:EnhancedTask
+    enhanced_task: EnhancedTask
+
 
 class CodeGenerationAgent:
     def __init__(
@@ -41,6 +52,7 @@ class CodeGenerationAgent:
         messages = state["messages"]
         iterations = state["iterations"]
         error = state["error"]
+        enhanced_task = state["enhanced_task"]
 
         if error == "yes":
             messages.append(
@@ -52,15 +64,18 @@ class CodeGenerationAgent:
             )
 
         human_message = messages[-1][1]  # Get the latest human message
+
+        # Prepare task requirements string
+        # task_requirements = "\n".join(enhanced_task.get("requirements", []))
+
         code_solution = self.code_gen_chain.invoke(
             {
                 **state["context"],
-                "current_task": human_message,
+                "current_task_desc": human_message,
                 "format_instructions": self.format_instructions,
             },
             config=self.config,
         )
-
         # Ensure all fields are present in the Code object
         code_solution_dict = code_solution.dict()
         for field in ["imports", "code", "description"]:
@@ -149,55 +164,89 @@ class CodeGenerationAgent:
         # workflow.add_edge("conv_result", END)
 
         return workflow.compile()
+
     # @staticmethod
-    def kaggle_conv_code( self,state: KaggleProblemState) :
-        # self.task = state.enhanced_task
+    def kaggle_conv_code(self, state: KaggleProblemState):
+        # task_codes_results
+        # human message [x]
+        task_code_pairs_formatted = []
+        index = 1
+        for i, j in state.task_codes_results.items():
+            task_code_pairs_formatted.append(
+                f"""
+*************
+task No.{index}
+
+Task:
+
+{i}
+
+---------------------
+
+Code :
+
+{j[0]}
+
+---------------------
+
+Result:
+
+{j[1]}
+*************
+"""
+            )
+            index += 1
+        messages = [
+            (
+                "human",
+                f"Current Task :\n{state.enhanced_task.task}\n\nTask Requirements:\n{state.enhanced_task.requirements}",
+            )
+        ]
         context = {
             "problem_description": state.problem_description,
             "project_state": {
                 "dataset_info": state.dataset_info,
-                "current_task": state.current_task,
-                "previous_tasks": state.previous_tasks,
-                "task_codes": state.task_codes_results,
-                # "task_results": state.task_results,
+                "current_task": state.enhanced_task.task,
                 "model_info": state.model_info,
                 "planned_tasks": state.planned_tasks,
                 "evaluation_metric": state.evaluation_metric,
                 "best_score": state.best_score,
             },
-            "task_code_pairs": [
-                {"task": task, "code": state.task_codes_results[task]}
-                for task in state.previous_tasks
-            ],
+            "task_code_pairs": "\n".join(task_code_pairs_formatted),
         }
 
         initial_state = {
-            "messages": [("human", state.enhanced_task.task)],
+            "messages": messages,
             "iterations": 0,
             "context": context,
             "error": "no",
-            "enhanced_task":state.enhanced_task,
-            "generation": Code(
-                imports="", code="", description=""
-            ),  # Initialize with empty Code
+            "enhanced_task": state.enhanced_task.dict(),  # Convert EnhancedTask to dict
+            "generation": Code(imports="", code="", description=""),
         }
-        # return initial_state
+        Path("log.txt").touch()
+        with open("log.txt", "a") as f:
+            
+            f.write(
+                str(orjson.dumps(initial_state, default=encode_json), encoding="utf8")
+            )
+            f.write("\n\n************************************************\n\n\n")
         result = self.workflow.invoke(initial_state, config=self.config)
-        # return result["generation"]
-        return {"task_codes_results": {state.enhanced_task.task: (result["generation"], "")}}
-        
+        return {
+            "task_codes_results": {state.enhanced_task.task: (result["generation"], "")}
+        }
 
     def _conv(self, state):
         # code = self.generate_code(state)
         # state.task_codes_results[state.enhanced_task.task] = (code, '')
-        print("****--"*10)
+        print("****--" * 10)
         print({"task_codes_results": {self.task.task: (state["generation"], "")}})
-        
+
         return {"task_codes_results": {self.task.task: (state["generation"], "")}}
 
     def __call__(self, state: KaggleProblemState):
 
         return self.kaggle_conv_code(state)
+
     #     state.task_codes_results[state.enhanced_task.task] = (code, "")
 
     #     return {"task_codes_results": state.task_codes_results}
