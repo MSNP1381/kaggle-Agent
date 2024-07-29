@@ -7,8 +7,8 @@ You are an AI assistant tasked with solving a Kaggle machine learning problem. Y
 Problem Description:
 {problem_description}
 
-Current State:
-{state}
+information about problem dataset:
+{dataset_info}
 
 Your task is to:
 1. Thoroughly analyze the problem description to understand the objectives and requirements.
@@ -28,6 +28,7 @@ Notes:
 - Do not use any visually formatted outputs like rendered HTML; use text or dictionaries for outputs.
 - Take into account the current state, including results from previous tasks and existing variables.
 - You must be consistent and structured.
+
 
 formated instruction : is as follow
 {format_instructions}

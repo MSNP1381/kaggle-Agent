@@ -3,11 +3,12 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 
+
 from states.enhancer import EnhancedTask
 from states.main import KaggleProblemState
 
 
-class KaggleTaskEnhancer:
+class KaggleTaskEnhancer():
     def __init__(self, config, proxy):
         self.config = config
         self.llm = ChatOpenAI(model="gpt-4o-mini", http_client=proxy, temperature=0)
@@ -16,27 +17,24 @@ class KaggleTaskEnhancer:
             [
                 (
                     "system",
-                    """You are an AI assistant specialized in enhancing and evaluating Kaggle machine learning tasks. 
-            Your goal is to provide detailed, actionable task descriptions that align with the current state of the project.
+                    """You are an AI assistant specializing in enhancing and evaluating Kaggle machine learning tasks. Your goal is to enhance task descriptions by combining reasoning and actionable insights.
 
-            When analyzing a task, consider the following aspects of the project state:
-            1. Problem Description: The overall goal and context of the Kaggle problem.
-            2. Dataset Information: The structure, size, and characteristics of the dataset.
-            3. Current Task: The specific task at hand and its place in the overall workflow.
-            4. Previous Tasks: What has been done so far and how it impacts the current task.
-            5. Task Results: Outcomes of previously completed tasks.
-            6. Model Information: Any existing models or modeling decisions made.
-            7. Planned Tasks: The overall plan and how this task fits into it.
-            8. Evaluation Metric: The metric used to assess model performance.
-            9. Best Score: The current best performance achieved.
+            **Reasoning**:
+            - **Problem Description**: Understand the overall goal and context of the Kaggle problem.
+            - **Dataset Information**: Evaluate the dataset’s structure, size, and characteristics.
+            - **Current Task**: Define the specifics of the task and its role in the project.
+            - **Previous Tasks and Results**: Review what has been done and the outcomes.
+            - **Model Information**: Consider existing models and decisions made.
+            - **Planned Tasks**: Check alignment with the overall project plan.
+            - **Evaluation Metric**: Align the task with the performance metric.
+            - **Best Score**: Aim to improve the current best performance.
 
-            Your enhanced task description should:
-            - Be specific and actionable
-            - Align with the problem description and evaluation metric
-            - Build upon previous tasks and their results
-            - Consider the current state of the project and dataset
-            - Provide clear guidance on what needs to be done and why
-            - Provide wethere outputs are reqired for this task or not which can be executed by code   
+            **Action**:
+            - Enhance the task description to be **specific** and **actionable**.
+            - Ensure it **aligns** with the **problem description** and **evaluation metric**.
+            - Build upon **previous tasks** and their results.
+            - Provide clear **guidance** on what needs to be done and **why**.
+            - Specify if **outputs** are required and ensure they are executable by code.
 
             {format_instructions}
             """,
@@ -44,19 +42,19 @@ class KaggleTaskEnhancer:
                 (
                     "human",
                     """
-            Problem Description: {problem_description}
+            **Problem Description**: {problem_description}
 
-            Current Task: {task}
+            **Current Task**: {task}
 
-            Project State:
-            - Dataset I-nfo: {dataset_info}
+            **Project State**:
+            - Dataset Info: {dataset_info}
             - Tasks Results: {task_results}
             - Model Info: {model_info}
             - Planned Tasks: {planned_tasks}
             - Evaluation Metric: {evaluation_metric}
             - Best Score: {best_score}
 
-            Based on this information, please enhance the task description and determine its requirements.
+            Using the above information, apply reasoning to enhance the task description and determine specific actions required.
             """,
                 ),
             ]

@@ -4,11 +4,12 @@ import pandas as pd
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 
+
 from prompts.utils import DATASET_ANALYSIS_PROMPT
 from states.main import KaggleProblemState
 
 
-class KaggleDataUtils:
+class KaggleDataUtils():
     def __init__(self, config, proxy):
         """
         Initializes the KaggleDataUtils with configuration and proxy settings.
@@ -89,4 +90,4 @@ class KaggleDataUtils:
 
         result = self.analyze_dataset(pd.read_csv(state.dataset_path))
 
-        return {"dataset_info": json.dumps(result, indent=1)}
+        return {"dataset_info": json.dumps(result, indent=1).replace("\\n", "\n")}

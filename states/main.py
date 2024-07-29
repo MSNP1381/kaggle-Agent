@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
+# from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 from langchain.pydantic_v1 import BaseModel, Field
 from operator import add, concat
 from typing_extensions import Annotated
+import yaml
 from .enhancer import EnhancedTask
 
 # from typing_extensions import TypedDict
@@ -28,44 +29,43 @@ class Code(BaseModel):
         description (str): A brief explanation of what the code does, how it works, and any
                            important considerations or assumptions made in the implementation.
 
-    Example:
-        ```python
-        solution = Code(
-            imports="import numpy as np\nfrom sklearn.model_selection import train_test_split",
-            code="def preprocess_data(X, y):\n    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)\n    return X_train, X_test, y_train, y_test",
-            description="This function preprocesses the input data by splitting it into training and testing sets using an 80-20 split ratio."
-        )
-        ```
-
     Note:
         All fields are required to be non-empty when creating a Code instance.
         The 'code' field has a default value to ensure it's always present, even if empty.
     """
 
-    imports: str = Field(description="Imports required for the solution.")
+    imports: str = Field(
+        description="Imports required for the solution.",# default="# no imports"
+    )
     code: str = Field(
-        description="Code for the solution", default="#no Code for this task"
+        description="Code for the solution", #default="#no Code for this task"
     )
     description: str = Field(description="Description for the solution.")
 
     def __str__(self):
         return f"{self.imports}\n{self.code}"
-
+    def __repr__(self) -> str:
+        return f"{self.imports}\n--------code--------\n{self.code}\n--------desc--------\n{self.description}\n"
+        
+        
 
 
 class KaggleProblemState(BaseModel):
-    problem_description: str
-    dataset_path: str = ""
+    problem_description: str = Field(default="")
+    dataset_path: str = Field(default="")
 
-    dataset_info: str = Field(default_factory=str)
-    current_task: str = ""
+    dataset_info: Optional[str] = Field(default="")
+    current_task: Optional[str] = Field(default="")
+    model_info: Dict[str, Any] = Field(default=None)
+    # planned_tasks: List[str] = Field(default_factory=list)
+
     # previous_tasks: Annotated[List[str], add] = field(default_factory=list)
-    task_codes_results: Annotated[
-        Dict[str, Tuple[EnhancedTask, Code, str]], dict_concat
-    ] = Field(default_factory=dict)
+    task_codes_results: Annotated[List[Tuple[EnhancedTask, Code, str]], add] = Field(
+        default=None
+    )
     # task_results: Dict[str, Any] = field(default_factory=dict)
-    model_info: Dict[str, Any] = Field(default_factory=dict)
-    planned_tasks: List[str] = Field(default_factory=list)
+    # model_info: Dict[str, Any] = Field(default_factory=dict)
+    planned_tasks: List[str] = Field(default=None)
     evaluation_metric: Optional[str] = Field(default=None)
     best_score: Optional[float] = Field(default=None)
     enhanced_task: EnhancedTask = Field(default=None)
@@ -90,13 +90,13 @@ class KaggleProblemState(BaseModel):
 
     def get_task_results(self):
         l = []
-        for task, cr in self.task_codes_results.items():
+        for cr in self.task_codes_results:
             (enh_task, code, result) = cr
             l.append(
                 f"""
             task description : 
             `
-            {enh_task}
+            {str(enh_task)}
             `
             ---------------------------------------
             generated code :
@@ -110,4 +110,9 @@ class KaggleProblemState(BaseModel):
             `
             """
             )
-        return "\n\n".join(l)
+        return "\n".join(l)
+    def __str__(self) -> str:
+        return self.json()
+    
+    def __repr__(self) -> str:
+        return self.json(indent=1)

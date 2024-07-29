@@ -4,9 +4,12 @@ from nbconvert import HTMLExporter
 from nbconvert.preprocessors import ExecutePreprocessor
 import copy
 from nbconvert.preprocessors import CellExecutionError
+import pandas as pd
 
 
-class NBExecutor:
+
+
+class NBExecutor():
     def __init__(self):
         self.nb_name = ""
         self.nb: nbformat.NotebookNode = None
@@ -102,13 +105,49 @@ class NBExecutor:
         return None
 
     def get_latest_output(self):
+        """
+        Parses the outputs of a code cell.
 
-        # Find the last code cell with output
-        for cell in reversed(self.nb.cells):
-            if cell.cell_type == "code" and cell.outputs:
-                return f"{self.process_cell_output(cell)}"
+        Args:
+            cell (nbformat.NotebookNode): Code cell.
 
-        return None  # If no output found
+        Returns:
+            list: Formatted output messages.
+        """
+        last_cell = self.nb.cells[-1]
+        
+        formatted_outputs = []
+        for output in last_cell.get("outputs", []):
+            if output.output_type == "stream" and output.name == "stdout":
+                formatted_outputs.append(f"Text Output:\n{output.text}")
+            elif output.output_type == "display_data":
+                if "data" in output and "text/plain" in output.data:
+                    formatted_outputs.append(output.data["text/plain"])
+                elif "data" in output and "application/vnd.dataframe+json" in output.data:
+                    df_json = output.data["application/vnd.dataframe+json"]
+                    df = pd.read_json(df_json)
+                    formatted_outputs.append("DataFrame Output:")
+                    formatted_outputs.append(df.to_string(index=False))
+                    # init_notebook_mode(all_interactive=True)  # Enable interactive tables
+                else:
+                    formatted_outputs.append("Unknown Display Data")
+            elif output.output_type == "execute_result":
+                formatted_outputs.append(output.data["text/plain"])
+            elif "ename" in output:
+                formatted_outputs.append(
+                    f"Error: {output.ename}\n{output.evalue}\n{output.traceback}"
+                )
+            else:
+                formatted_outputs.append(f"Unknown Output Type: {output.output_type}")
+
+        return formatted_outputs
+
+    # Find the last code cell with output
+    # for cell in reversed(self.nb.cells):
+    #     if cell.cell_type == "code" and cell.outputs:
+    #         return f"{self.process_cell_output(cell)}"
+
+    # return None  # If no output found
 
 
 if __name__ == "__main__":

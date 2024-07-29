@@ -25,6 +25,9 @@ httpx = {extras = ["socks"], version = "^0.27.0"}
 grandalf = "^0.8"
 black = "^24.4.2"
 orjson = "^3.10.6"
+loguru = "^0.7.2"
+pyyaml = "^6.0.1"
+streamlit = "^1.37.0"
 
 
 [tool.poetry.group.dev.dependencies]

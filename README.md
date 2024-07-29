@@ -9,6 +9,8 @@
 - [ ] Logging
 - [ ] Getting formatted evaluation and code execution result without execution
 - [ ] adding code generation to graph
+- [ ] add re planner to cycle
+- [ ] revision tasks
 
 ## 🌟 Overview
 

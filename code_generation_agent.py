@@ -5,11 +5,20 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph, START
 from typing import List, TypedDict
 from langchain.output_parsers import PydanticOutputParser
+
 from states.enhancer import EnhancedTask
 from states.main import KaggleProblemState
 from nbexecutor import NBExecutor
 from prompts.code_generatino_prompt import SIMPLIFIED_CODE_GEN_PROMPT
 from states.main import Code
+from nbconvert.preprocessors import CellExecutionError
+"""
+TODO:
+- [ ] it is koskholing
+- [ ] consistant code formatting
+- [ ] change structure 
+- [ ] inject problem information 
+"""
 
 # from utils import encode_json
 
@@ -28,7 +37,7 @@ class GraphState(TypedDict):
     enhanced_task: EnhancedTask
 
 
-class CodeGenerationAgent:
+class CodeGenerationAgent():
     def __init__(
         self,
         config,
@@ -76,13 +85,8 @@ class CodeGenerationAgent:
             },
             config=self.config,
         )
-        # Ensure all fields are present in the Code object
-        code_solution_dict = code_solution.dict()
-        for field in ["imports", "code", "description"]:
-            if field not in code_solution_dict or code_solution_dict[field] is None:
-                code_solution_dict[field] = ""  # Set to empty string if missing
 
-        code_solution = Code(**code_solution_dict)
+        # code_solution = Code(**code_solution_dict)
 
         messages.append(
             (
@@ -118,10 +122,13 @@ class CodeGenerationAgent:
                 "iterations": iterations,
                 "error": "no",
             }
-        except Exception as e:
-            print(f"---CODE CHECK FAILED: {str(e)}---")
+        except CellExecutionError as e:
+            print(f"---CODE CHECK FAILED: {e.evalue}---")
             error_message = [
-                ("human", f"Your solution failed with the following error: {str(e)}")
+                (
+                    "human",
+                    f"Your solution failed with the following error:{e.ename}\n\n {e.evalue}\n\n {e.traceback}",
+                )
             ]
             messages += error_message
             return {
@@ -139,7 +146,7 @@ class CodeGenerationAgent:
             print("---DECISION: FINISH---")
             return "end"
         else:
-            print("---DECISION: RE-TRY SOLUTION---")
+            print("---DECISION: RE-TRY SOLUTION---", "iters No.", iterations)
             return "generate"
 
     def create_workflow(self):
@@ -171,21 +178,23 @@ class CodeGenerationAgent:
         # human message [x]
         task_code_pairs_formatted = []
         index = 1
-        for i, j in state.task_codes_results.items():
+        prev_tasks = []
+        for j in state.task_codes_results:
+            prev_tasks.append(str(j[0]))
             (enh_task, code, res) = j
             task_code_pairs_formatted += [
                 (
                     "human",
                     f"""
 *************
-task No.{index}
+*Task No.*{index}
 
-Task:
+*Task*:
 
-{i}
+{str(enh_task)}
 
 ---------------------
-Requirements:
+*Requirements*:
 {"\n".join(enh_task.requirements) }
 
 """,
@@ -201,7 +210,8 @@ Requirements:
 Result:
 
 {res}
-*************""",
+*************
+""",
                 ),
             ]
 
@@ -212,7 +222,7 @@ Result:
         task_code_pairs_formatted += [
             (
                 "human",
-                f"Current Task :\n{state.enhanced_task.task}\n\nTask Requirements:\n{state.enhanced_task.requirements}\n\nAdhere strictly to the following output format: \n {self.format_instructions}",
+                f"**Current Task** :\n{str(state.enhanced_task)} \n ------------\n Adhere strictly to the following output format and you must follow this formst instruction: \n {self.format_instructions}",
             )
         ]
 
@@ -226,6 +236,7 @@ Result:
                 "evaluation_metric": state.evaluation_metric,
                 "best_score": state.best_score,
             },
+            "prev_tasks": prev_tasks,
         }
 
         initial_state = {
@@ -245,22 +256,14 @@ Result:
             f.write("\n\n************************************************\n\n\n")
         result = self.workflow.invoke(initial_state, config=self.config)
         return {
-            "task_codes_results": {
-                state.enhanced_task.task: (
+            "task_codes_results": [
+                 (
                     state.enhanced_task,
                     result["generation"],
                     "",
                 )
-            }
+            ]
         }
-
-    def _conv(self, state):
-        # code = self.generate_code(state)
-        # state.task_codes_results[state.enhanced_task.task] = (code, '')
-        print("****--" * 10)
-        print({"task_codes_results": {self.task.task: (state["generation"], "")}})
-
-        return {"task_codes_results": {self.task.task: (state["generation"], "")}}
 
     def __call__(self, state: KaggleProblemState):
 

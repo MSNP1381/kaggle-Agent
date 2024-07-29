@@ -10,8 +10,15 @@ You are an expert Python coding assistant specialized in machine learning and da
 1. Context Understanding:
 Analyze the following context carefully:
 -------
-Problem Description: {problem_description}
-Project State: {project_state}
+Problem Description: 
+{problem_description}
+
+Project State: 
+{project_state}
+
+previous executed Tasks: 
+{prev_tasks}
+
 -------
 Use this context to inform your code generation, ensuring relevance and appropriateness.
 
@@ -53,11 +60,14 @@ Analyze the task requirements for any output-related instructions. Requirements 
 - For plots or visualizations, capture and display as requested.
 If no output requirements are specified, focus on core task implementation without additional output code.
 
-8. Output Format:
+8. Code Generation Considerations:
+- For outputing dataframe only use well formatted outputs like json or dict.
+- Always consider code that are generated and be consistent about that
+
 
 Remember, your goal is to provide a comprehensive, error-free, and executable solution that directly addresses the user's task while leveraging and building upon existing task-code pairs. Provide only the code without additional explanations unless specifically requested in the task.
 """,
         ),
-        ("placeholder", "{conversation}")
+        ("placeholder", "{conversation}"),
     ]
 )

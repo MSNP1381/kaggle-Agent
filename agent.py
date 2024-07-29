@@ -12,13 +12,23 @@ import os
 from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
-
-# from states.
 from datautils import KaggleDataUtils
+from langgraph.checkpoint.sqlite import SqliteSaver
+
+# from loguru import logger
+from datetime import datetime
+
+# print)
+# logfile = f"misc/logs/output{datetime.now().__str__()}.log"
 
 
 class KaggleProblemSolver:
-    def __init__(self, config, proxy):
+    def __init__(
+        self,
+        config,
+        proxy,
+    ):
+        # super().__init__()
         self.config = config
         print(os.getenv("HTTP_PROXY_URL"))
         print("---" * 10)
@@ -66,7 +76,7 @@ class KaggleProblemSolver:
             return END
         return "enhancer"
 
-    def compile(self):
+    def compile(self,interrupt_before=None):
         graph_builder = StateGraph(KaggleProblemState)
         graph_builder.add_node("code_agent", self.code_agent)
         graph_builder.add_node("planner", self.planner)
@@ -85,13 +95,21 @@ class KaggleProblemSolver:
         graph_builder.add_conditional_edges(
             "executor", self.is_plan_done, path_map={END: END, "enhancer": "enhancer"}
         )
-        self.graph = graph_builder.compile()
+
+        memory = SqliteSaver.from_conn_string(":memory:")
+
+        self.graph = graph_builder.compile(
+            checkpointer=memory, interrupt_before=interrupt_before
+        )
         return self.graph
 
     def invoke(self, debug=True):
         state = self._init_state()
+        for event in graph.stream(state,config=self.config):
+            
+            print(event)
         # self.graph.astream_log
-        return self.graph.invoke(state, config=self.config, debug=debug)
+        # return self.graph.invoke(state, config=self.config, debug=debug)
 
         #
 
@@ -137,6 +155,7 @@ class KaggleProblemSolver:
 
 # Example usage
 if __name__ == "__main__":
+    
     print(".env loaded:", load_dotenv())
 
     proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
@@ -148,13 +167,21 @@ if __name__ == "__main__":
         host=os.getenv("LANGFUSE_HOST"),
         session_id=f"session-{int(time.time())}",
     )
+    # logger.add(logfile, colorize=True, enqueue=True,level=8)
+
+    # handler_1 = FileCallbackHandler(logfile)
+    # handler_2 = StdOutCallbackHandler()
     # r=KaggleProblemState()
-    config = {"callbacks": [langfuse_handler], "recursion_limit": 50}
+    config = {
+        "configurable": {"thread_id": str(int(time.time()))},
+        "callbacks": [
+            langfuse_handler,  # handler_1,handler_2
+        ],
+        "recursion_limit": 50,
+    }
     solver = KaggleProblemSolver(config, proxy)
     graph = solver.compile()
     t = graph.get_graph(xray=2).draw_mermaid()
-    with open("x.txt", "w") as f:
-        f.write(t)
     # exit()
     res = solver.invoke()
     print(res)

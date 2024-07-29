@@ -3,6 +3,7 @@ from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from typing import Dict, Any, Union, List
 from langchain.pydantic_v1 import BaseModel, Field
+
 from prompts.prompts import PLANNER_PROMPT
 from states.main import KaggleProblemState
 from langchain.output_parsers import PydanticOutputParser
@@ -33,7 +34,7 @@ class Plan(BaseModel):
     )
 
 
-class KaggleProblemPlanner:
+class KaggleProblemPlanner():
     """
     A class to plan and manage tasks for solving a Kaggle machine learning problem.
     """
@@ -69,7 +70,7 @@ class KaggleProblemPlanner:
             response = (self.planner_prompt | self.llm | parser).invoke(
                 {
                     "problem_description": state.problem_description,
-                    "state": str(state.__dict__),
+                    "dataset_info": str(state.dataset_info),
                     "format_instructions": parser.get_format_instructions(),
                 },
                 config=self.config,

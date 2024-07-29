@@ -69,7 +69,7 @@ class KaggleProblemRePlanner:
 
     def re_plan(self, state: KaggleProblemState) -> List[str]:
         last_task = (
-            state.enhanced_task.task
+            state.enhanced_task.enhanced_description
             if hasattr(state.enhanced_task, "task")
             else str(state.enhanced_task)
         )
