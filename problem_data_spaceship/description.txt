@@ -1,0 +1,24 @@
+## Comprehensive Overview of the Titanic Kaggle Challenge
+
+### Challenge Objective:
+The main objective of the Titanic ML competition is to develop a machine learning model that accurately predicts which passengers survived the Titanic shipwreck based on various available data about the passengers. Participants will analyze a dataset derived from the tragic sinking of the RMS Titanic on April 15, 1912, where 1,502 out of 2,224 onboard lost their lives. The challenge seeks to identify which groups were more likely to survive based on the demographic and socio-economic information available for each passenger.
+
+#### Features:
+The dataset includes the following features:
+
+| **Variable** | **Definition** | **Key** |
+|--------------|----------------|---------|
+| survival     | Indicates if the passenger survived | 0 = No, 1 = Yes |
+| pclass       | Ticket class (proxy for socio-economic status) | 1 = 1st, 2 = 2nd, 3 = 3rd |
+| sex          | Gender of the passenger |  |
+| age          | Passenger's age in years | Age can be fractional if less than 1; estimated ages are in format xx.5 |
+| sibsp        | Number of siblings/spouses aboard the Titanic |  |
+| parch        | Number of parents/children aboard the Titanic |  |
+| ticket       | Ticket number |  |
+| fare         | Fare paid by the passenger |  |
+| cabin        | Cabin number |  |
+| embarked     | Port of Embarkation | C = Cherbourg, Q = Queenstown, S = Southampton |
+
+#### Important Notes:
+- **pclass**: Reflects the socio-economic status of passengers—1st class (upper class), 2nd class (middle class), and 3rd class (lower class).
+- **sibsp** and **parch**: Indicate familial relationships aboard the Titanic, specifying the number of siblings/spouses and parents/children, respectively. 

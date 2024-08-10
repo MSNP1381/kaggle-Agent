@@ -2,6 +2,7 @@ import json
 import subprocess
 from typing import Any, Dict, List, Literal, Union
 import yaml
+
 # from states.main import KaggleProblemState
 from prompts.utils import DATASET_ANALYSIS_PROMPT
 
@@ -31,10 +32,9 @@ def exec_in_venv(code, venv_path="./.venv"):
     return stdout
 
 
-
-
-
 def dict_concat(a, b):
     return {**a, **b}
 
-    
+
+def cc(s: str):
+    return s.replace("\\n", "\n")

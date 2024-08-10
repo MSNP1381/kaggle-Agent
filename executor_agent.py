@@ -5,9 +5,10 @@ from nbexecutor import (
     NBExecutor,
 )  # Assuming NBExecutor is in a file named nbexecutor.py
 from states.main import KaggleProblemState
+from utils import cc
 
 
-class KaggleCodeExecutor():
+class KaggleCodeExecutor:
     def __init__(self, nb_executor: NBExecutor):
         self.nb_executor = nb_executor
         self.nb_executor.create_nb()
@@ -21,7 +22,12 @@ class KaggleCodeExecutor():
 
     def execute_code(self, code, task: str):
         # Combine imports and code
-        code_txt = f'\n_="""\n\n{task}\n\n"""\n\n' + code.imports + "\n" + code.code
+        code_txt = (
+            # f'\n_="""\n\n{task}\n\n"""\n\n' +
+            code.imports
+            + "\n"
+            + code.code
+        )
 
         # Add the code to the notebook
         self.nb_executor.add_nb_code_block(code_txt)
@@ -32,7 +38,7 @@ class KaggleCodeExecutor():
         # Get the latest output
         output = self.nb_executor.get_latest_output()
 
-        return output
+        return cc("\n-".join(output))
 
     # def get_dataframe(self, variable_name):
     #     # Add a code block to display the dataframe
@@ -53,12 +59,9 @@ class KaggleCodeExecutor():
     #     return self.nb_executor.get_latest_output()
 
     def __call__(self, state: KaggleProblemState):
-        enhanced_task = state.enhanced_task
+        enhanced_task = state.enhanced_tasks[state.index]
         code = state.task_codes_results[-1][1]
-        output = self.execute_code(code, str(state.enhanced_task))
-
-        return {
-            "task_codes_results": 
-                 [(enhanced_task, code, str(output))]
-            }
-        
+        output = self.execute_code(code, str(state.enhanced_tasks[state.index]))
+        task_codes = state.task_codes_results
+        task_codes[-1] = (enhanced_task, code, str(output))
+        return {"task_codes_results": task_codes}

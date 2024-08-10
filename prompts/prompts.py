@@ -1,11 +1,12 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 
-PLANNER_PROMPT = """
+PLANNER_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """\
 You are an AI assistant tasked with solving a Kaggle machine learning problem. Your goal is to create or update a detailed plan to solve the problem based on the provided information.
-
-Problem Description:
-{problem_description}
 
 information about problem dataset:
 {dataset_info}
@@ -24,14 +25,25 @@ Essential Steps to Cover in the Plan:
 - Any additional steps specific to the problem.
 
 Notes:
-- Do not call the plt.show() method for plots in the code.
-- Do not use any visually formatted outputs like rendered HTML; use text or dictionaries for outputs.
-- Take into account the current state, including results from previous tasks and existing variables.
 - You must be consistent and structured.
 
+please be detailed and provide your answers based on exprience and prevoius knowledge that you have.""",
+        ),
+        (
+            "human",
+            """\
+Please provide a plan for this problem that is provided below.
+your output should contain a description about dataset info and problem description and give reasoning about problem and procedure.
+**Note**: you must follow format instruction provided
 
-formated instruction : is as follow
+**Problem Description**:
+{problem_description}
+
+-------
+**Format Instructions: **
 {format_instructions}
 
-Provide sufficient detail in each task to guide subsequent steps.
-"""
+""",
+        ),
+    ]
+)
