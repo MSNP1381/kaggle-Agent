@@ -58,7 +58,7 @@ class KaggleDataUtils:
         self.output_parser = PydanticOutputParser(pydantic_object=DatUtilState)
         self.chain = self.dataset_analysis_prompt | self.llm | self.output_parser
 
-    def analyze_dataset(self, dataset: pd.DataFrame):
+    def analyze_dataset(self, dataset: pd.DataFrame, data_initial_info):
         """
         Analyzes the dataset and provides a description and preprocessing recommendations.
 
@@ -75,6 +75,7 @@ class KaggleDataUtils:
                 {
                     "dataset_overview": dataset_overview,
                     "dataset_head": dataset_head,
+                    'data_initial_info': data_initial_info,
                     "format_instructions": self.output_parser.get_format_instructions(),
                 },
                 config=self.config,
@@ -125,7 +126,7 @@ class KaggleDataUtils:
 
     def __call__(self, state: KaggleProblemState):
 
-        result = self.analyze_dataset(pd.read_csv(state.dataset_path))
+        result = self.analyze_dataset(pd.read_csv(state.dataset_path), state.dataset_info)
         # print(result)
 
         return {"dataset_info": result.json().replace("\\n", "\n")}

@@ -7,7 +7,7 @@ from langgraph.graph import END, StateGraph, START
 from typing import Annotated, List, TypedDict, Set
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.output_parsers import StrOutputParser
-
+from langchain.output_parsers import OutputFixingParser
 from langchain.pydantic_v1 import BaseModel, Field
 from nbclient.exceptions import CellExecutionError
 from states.code import Code
@@ -17,11 +17,6 @@ from prompts.code_generation_prompt import (
     IMPROVED_CODE_GEN_PROMPT,
     VARIABLE_CORRECTION_PROMPT,
 )
-import dspy
-
-from dspy.evaluate.evaluate import Evaluate
-from dspy.teleprompt import BootstrapFewShotWithRandomSearch
-from dspy.predict.langchain import LangChainPredict, LangChainModule
 
 import re
 
@@ -69,7 +64,7 @@ class CodeGenerationAgent:
         self,
         config,
         proxy,
-        nb_executor: NBExecutor,
+        nb_executor,
         model="gpt-4o-mini",
         max_iterations=3,
         base_url="https://api.avalai.ir/v1",
@@ -92,13 +87,8 @@ class CodeGenerationAgent:
         # zeroshot_chain = LangChainModule(zeroshot_chain)  #
         # self.code_gen_chain = zeroshot_chain
         self.code_gen_chain = self.code_gen_prompt | self.llm
+
         self.workflow = self.create_workflow()
-
-    def _init_dspy(self):
-
-        colbertv2 = dspy.ColBERTv2(url="http://20.102.90.50:2017/wiki17_abstracts")
-
-        dspy.configure(rm=colbertv2)
 
     def generate(self, state: CodeGraphState):
         print("---GENERATING CODE SOLUTION---")

@@ -166,3 +166,4 @@ generated_notebooks/*
 
 misc/
 x.png
+.conda/

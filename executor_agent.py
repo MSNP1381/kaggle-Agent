@@ -9,16 +9,15 @@ from utils import cc
 
 
 class KaggleCodeExecutor:
-    def __init__(self, nb_executor: NBExecutor):
+    def __init__(self, nb_executor):
         self.nb_executor = nb_executor
-        self.nb_executor.create_nb()
+
 
         # Add initial imports
         initial_imports = (
             """import pandas as pd\nfrom IPython.display import display, HTML"""
         )
-        self.nb_executor.add_nb_code_block(initial_imports)
-        self.nb_executor.execute_notebook()
+        self.nb_executor.test_and_execute(initial_imports)
 
     def execute_code(self, code, task: str):
         # Combine imports and code

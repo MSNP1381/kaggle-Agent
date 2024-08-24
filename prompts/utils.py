@@ -1,15 +1,26 @@
 # Define the prompt for dataset analysis
 DATASET_ANALYSIS_PROMPT = """
-You are an AI assistant tasked with analyzing a dataset for a Kaggle machine learning problem.
+You are an AI assistant tasked with analyzing a dataset for a Kaggle machine learning problem, and consider kaggle's original dataset description as your foundation of analysis.
 Given the dataset, provide a comprehensive description and recommend preprocessing steps.
 
+kaggle's original dataset description can be found here:
+
+```
+{data_initial_info}
+```
+
 Dataset Overview:
+```
 {dataset_overview}
+```
 
 Dataset first few rows:
+
 ```
 {dataset_head}
 ```
+
+
 Your task is to:
 1. Describe the dataset including data types, number of missing values, unique values, and any potential issues in manner of qualitative output.
     for example:

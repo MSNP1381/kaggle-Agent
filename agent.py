@@ -1,11 +1,18 @@
+import argparse
 import json
 import time
 import httpx
 from langgraph.graph import StateGraph, START, END
 from psycopg_pool import ConnectionPool
+from pymongo import MongoClient
+
 from code_generation_agent import CodeGenerationAgent, CodeGraphState
+# from NBExecutorAutoGen import JupyterNBExecutor
+from kaggle_scaper import ScrapeKaggle
+from nbexecutor_autoGen import NBExecutorAutoGen
 from nbexecutor import NBExecutor
-from persistence.postgres import PostgresSaver
+from persistence.mongo import MongoDBSaver
+
 from planner_agent import KaggleProblemPlanner
 from replanner import KaggleProblemRePlanner
 from executor_agent import KaggleCodeExecutor
@@ -14,11 +21,11 @@ import os
 from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
-from datautils import KaggleDataUtils
-from langgraph.checkpoint.sqlite import SqliteSaver
+from dataUtils_agent import KaggleDataUtils
 
 # from loguru import logger
 from datetime import datetime
+
 
 # print)
 # logfile = f"misc/logs/output{datetime.now().__str__()}.log"
@@ -29,16 +36,21 @@ class KaggleProblemSolver:
         self,
         config,
         proxy,
+        client,args
     ):
+        self.url=args.url
         # super().__init__()
         self.config = config
+        self.client = client
         print(os.getenv("HTTP_PROXY_URL"))
         print("---" * 10)
         self.proxy = proxy
-        self.nb_executor = NBExecutor()
+        # self.nb_executor = NBExecutor()
+        self.nb_executor = NBExecutorAutoGen()
         self.code_agent = CodeGenerationAgent(
             config, proxy=proxy, nb_executor=self.nb_executor
         )
+        self.scraper = ScrapeKaggle(self.client,self.config)
         self.planner = KaggleProblemPlanner(config, proxy=proxy)
         self.re_planner = KaggleProblemRePlanner(config, proxy=proxy)
         self.executor = KaggleCodeExecutor(self.nb_executor)
@@ -48,19 +60,12 @@ class KaggleProblemSolver:
 
     def _init_state(self):
         self.dataset_path = "./train.csv"
-        with open("./problem_data_spaceship/description.txt") as f:
-            self.problem_description = f.read()
-        # with open("./problem_data_spaceship/dataset_desc.txt") as f:
-        #     self.problem_description +="\n"+ f.read()
-
-        self.problem_description += "\n dataset path is ./train.csv"
-
+        self.nb_executor.create_nb()
+        self.nb_executor.upload_file_to_jupyter(self.dataset_path)
         return KaggleProblemState(
             **{
-                "index": -1,
-                "problem_description": self.problem_description,
+                'challenge_url':self.url,
                 "dataset_path": self.dataset_path,
-                "evaluation_metric": "accuracy",
             }
         )
 
@@ -86,6 +91,7 @@ class KaggleProblemSolver:
 
     def compile(self, checkpointer):
         graph_builder = StateGraph(KaggleProblemState)
+        graph_builder.add_node("scraper", self.scraper)
         graph_builder.add_node("code_agent", self.code_agent)
         graph_builder.add_node("planner", self.planner)
         # graph_builder.add_node("re_planner", self.re_planner)
@@ -93,7 +99,8 @@ class KaggleProblemSolver:
         graph_builder.add_node("enhancer", self.enhancer)
         graph_builder.add_node("data_utils", self.data_utils)
 
-        graph_builder.add_edge(START, "data_utils")
+        graph_builder.add_edge(START, "scraper")
+        graph_builder.add_edge('scraper', "data_utils")
         graph_builder.add_edge("data_utils", "planner")
         graph_builder.add_edge("planner", "enhancer")
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
@@ -116,30 +123,36 @@ class KaggleProblemSolver:
 
 # Example usage
 if __name__ == "__main__":
-
     print(".env loaded:", load_dotenv())
-
+    parser = argparse.ArgumentParser("kaggle_scraper")
+    parser.add_argument(
+        "--url",
+        help="url to challenge",
+        type=str,
+        required=True,
+        default=True
+    )
+    parser.add_argument(
+        "--cached",
+        help="use cached version",
+        type=bool,
+        required=False,
+    )
+    args = parser.parse_args()
     proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
 
     langfuse_handler = CallbackHandler(
-        # httpx_client="",
         public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
         secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
         host=os.getenv("LANGFUSE_HOST"),
         session_id=f"session-{int(time.time())}",
     )
-    # logger.add(logfile, colorize=True, enqueue=True,level=8)
 
-    # handler_1 = FileCallbackHandler(logfile)
-    # handler_2 = StdOutCallbackHandler()
-    # r=KaggleProblemState()
-    pool = ConnectionPool(
-        # Example configuration
-        conninfo=os.getenv("DB_URI"),
-        max_size=20,
+    client = MongoClient(
+        host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
     )
-    checkpointer = PostgresSaver(sync_connection=pool)
-    checkpointer.create_tables(pool)
+    checkpointer = MongoDBSaver(client, db_name="checkpoints")
+
     config = {
         "configurable": {"thread_id": str(int(time.time()))},
         # "callbacks": [
@@ -149,7 +162,7 @@ if __name__ == "__main__":
         "checkpointer": checkpointer,
     }
 
-    solver = KaggleProblemSolver(config, proxy)
+    solver = KaggleProblemSolver(config, proxy, client,args)
     graph = solver.compile(checkpointer)
     # exit()
     res = solver.invoke()

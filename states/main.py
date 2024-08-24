@@ -12,6 +12,7 @@ class KaggleProblemState(BaseModel):
     index: int = Field(default=-1)
     problem_description: str = Field(default="")
     dataset_path: str = Field(default="")
+    challenge_url: str = Field(default="")
     dataset_info: Optional[str] = Field(default="")
     current_task: Optional[str] = Field(default="")
     model_info: Dict[str, Any] = Field(default=None)
