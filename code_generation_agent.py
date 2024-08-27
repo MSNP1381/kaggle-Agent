@@ -4,7 +4,7 @@ import operator
 import pprint
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph, START
-from typing import Annotated, List, TypedDict, Set
+from typing import Annotated, List, TypedDict, Set, Dict
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.output_parsers import StrOutputParser
 from langchain.output_parsers import OutputFixingParser
@@ -89,6 +89,10 @@ class CodeGenerationAgent:
         self.code_gen_chain = self.code_gen_prompt | self.llm
 
         self.workflow = self.create_workflow()
+        s=self.workflow.get_graph().draw_mermaid()        
+        with open("code_mermaid.txt",'w')as f:
+            f.write(s)
+        print(s)
 
     def generate(self, state: CodeGraphState):
         print("---GENERATING CODE SOLUTION---")
@@ -160,7 +164,7 @@ code is :
 
         return {"generation": code_solution}
 
-    def extract_variables_from_ast(self, state: CodeGraphState) -> Set[str]:
+    def extract_variables_from_ast(self, state: CodeGraphState) -> dict[str, set[str]]:
         code = state["generation"].code
         tree = ast.parse(code)
         variables = set()
@@ -190,7 +194,7 @@ code is :
                 "error": "no",
                 "result": result,
             }
-        except CellExecutionError as e:
+        except Exception as e:
             print(f"---CODE CHECK FAILED: {e.ename}---")
 
             m = [
@@ -225,7 +229,6 @@ explain what error it is and how to solve it
                     "current_task": str(
                         kaggle_state.enhanced_tasks[kaggle_state.index]
                     ),
-                    "format_instructions": self.format_instructions,
                     "previous_tasks": kaggle_state.get_task_results(),
                 },
                 config=self.config,
@@ -306,7 +309,6 @@ explain what error it is and how to solve it
                 "model_info": kaggle_state.model_info,
                 "planned_tasks": kaggle_state.planned_tasks,
                 "evaluation_metric": kaggle_state.evaluation_metric,
-                "format_instructions": self.format_instructions,
                 "messages": state["messages"],
                 "current_task": str(kaggle_state.enhanced_tasks[kaggle_state.index]),
                 "format_instructions": self.format_instructions,
@@ -321,7 +323,7 @@ explain what error it is and how to solve it
         }
 
     def __call__(self, state: KaggleProblemState):
-        initial_state: CodeGraphState = {
+        initial_state = {
             "kaggle_state": state,
             "iterations": 0,
             "generation": GeneratedCode(imports="", code="", variables={}, summary=""),

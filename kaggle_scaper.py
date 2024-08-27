@@ -36,7 +36,13 @@ class Evaluation(BaseModel):
 
 
 class ScrapeKaggle:
-    def __init__(self, client: MongoClient, config=None, proxy=None, base_url="https://api.avalai.ir/v1", ):
+    def __init__(
+        self,
+        client: MongoClient,
+        config=None,
+        proxy=None,
+        base_url="https://api.avalai.ir/v1",
+    ):
         """
         Initializes the KaggleDataUtils with configuration and proxy settings.
 
@@ -45,7 +51,9 @@ class ScrapeKaggle:
             proxy (httpx.Client): HTTP client for proxy settings.
         """
         # proxy = httpx.Client(proxy="http://127.0.0.1:2080")
-        self.scraped_data_collection = client["challenge_data"].get_collection('scraped_data')
+        self.scraped_data_collection = client["challenge_data"].get_collection(
+            "scraped_data"
+        )
         self.config = config
         self.mongo_dict = {}
         self.llm = ChatOpenAI(
@@ -53,7 +61,7 @@ class ScrapeKaggle:
             model="gpt-4o-mini",
             http_client=proxy,
             api_key=os.getenv("OPENAI_API_KEY"),
-            temperature=0
+            temperature=0,
         )
 
     def extract_challenge_details(self, challenge_url: str):
@@ -118,14 +126,14 @@ class ScrapeKaggle:
             "evaluation": markdownify(challenge_evaluation),
             "data_details": markdownify(challenge_data_details),
         }
-        self.mongo_dict.update({'challenge_url': challenge_url, "scraped_data": d})
+        self.mongo_dict.update({"challenge_url": challenge_url, "scraped_data": d})
         for i, j in d.items():
             with open(f"./kaggle_challenges_data/{i}.md", "w") as f:
                 f.write(j)
         return d
 
     def get_saved_challenge_data(self, challenge_url):
-        result = self.scraped_data_collection.find_one({'challenge_url': challenge_url})
+        result = self.scraped_data_collection.find_one({"challenge_url": challenge_url})
         return result
 
     def summarize_data(self, description, evaluation, data_details):
@@ -141,16 +149,20 @@ class ScrapeKaggle:
             text=data_details
         )
         results = self.llm.batch([desc_inp, eval_inp, data_inp])
-        self.mongo_dict.update({"summarized": {
-            "description": results[0].content,
-            "evaluation": parser.invoke(results[1]).dict(),
-            "data_details": results[2].content}
-        })
+        self.mongo_dict.update(
+            {
+                "summarized": {
+                    "description": results[0].content,
+                    "evaluation": parser.invoke(results[1]).dict(),
+                    "data_details": results[2].content,
+                }
+            }
+        )
         self.scraped_data_collection.insert_one(self.mongo_dict)
         return {
             "description": results[0].content,
             "evaluation": parser.invoke(results[1]),
-            "data_details": results[2].content
+            "data_details": results[2].content,
         }
 
     def __call__(self, state: KaggleProblemState):
@@ -158,16 +170,16 @@ class ScrapeKaggle:
         result = self.get_saved_challenge_data(challenge_url)
         data = None
         if result:
-            data = result['summarized']
+            data = result["summarized"]
         else:
             dict_ = self.extract_challenge_details(challenge_url)
             data = self.summarize_data(**dict_)
 
         return {
             "index": -1,
-            "problem_description": data['description'],
-            'dataset_info': data['data_details'],
-            "evaluation_metric": data['evaluation']['metric'],
+            "problem_description": data["description"],
+            "dataset_info": data["data_details"],
+            "evaluation_metric": data["evaluation"]["metric"],
         }
 
 
@@ -177,4 +189,10 @@ if __name__ == "__main__":
         host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
     )
     s = ScrapeKaggle(client, proxy=None)
-    s(KaggleProblemState(**{'challenge_url': "https://www.kaggle.com/competitions/nlp-getting-started/"}))
+    s(
+        KaggleProblemState(
+            **{
+                "challenge_url": "https://www.kaggle.com/competitions/nlp-getting-started/"
+            }
+        )
+    )

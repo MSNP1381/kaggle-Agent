@@ -2,11 +2,13 @@ import argparse
 import json
 import time
 import httpx
+from autogen.coding.jupyter import DockerJupyterServer
 from langgraph.graph import StateGraph, START, END
 from psycopg_pool import ConnectionPool
 from pymongo import MongoClient
 
 from code_generation_agent import CodeGenerationAgent, CodeGraphState
+
 # from NBExecutorAutoGen import JupyterNBExecutor
 from kaggle_scaper import ScrapeKaggle
 from nbexecutor_autoGen import NBExecutorAutoGen
@@ -32,13 +34,8 @@ from datetime import datetime
 
 
 class KaggleProblemSolver:
-    def __init__(
-        self,
-        config,
-        proxy,
-        client,args
-    ):
-        self.url=args.url
+    def __init__(self, config, proxy, client,server, args):
+        self.url = args.url
         # super().__init__()
         self.config = config
         self.client = client
@@ -46,11 +43,12 @@ class KaggleProblemSolver:
         print("---" * 10)
         self.proxy = proxy
         # self.nb_executor = NBExecutor()
-        self.nb_executor = NBExecutorAutoGen()
+
+        self.nb_executor = NBExecutorAutoGen(server)
         self.code_agent = CodeGenerationAgent(
             config, proxy=proxy, nb_executor=self.nb_executor
         )
-        self.scraper = ScrapeKaggle(self.client,self.config)
+        self.scraper = ScrapeKaggle(self.client, self.config)
         self.planner = KaggleProblemPlanner(config, proxy=proxy)
         self.re_planner = KaggleProblemRePlanner(config, proxy=proxy)
         self.executor = KaggleCodeExecutor(self.nb_executor)
@@ -60,11 +58,11 @@ class KaggleProblemSolver:
 
     def _init_state(self):
         self.dataset_path = "./train.csv"
-        self.nb_executor.create_nb()
+        # self.nb_executor.create_nb()
         self.nb_executor.upload_file_to_jupyter(self.dataset_path)
         return KaggleProblemState(
             **{
-                'challenge_url':self.url,
+                "challenge_url": self.url,
                 "dataset_path": self.dataset_path,
             }
         )
@@ -100,7 +98,7 @@ class KaggleProblemSolver:
         graph_builder.add_node("data_utils", self.data_utils)
 
         graph_builder.add_edge(START, "scraper")
-        graph_builder.add_edge('scraper', "data_utils")
+        graph_builder.add_edge("scraper", "data_utils")
         graph_builder.add_edge("data_utils", "planner")
         graph_builder.add_edge("planner", "enhancer")
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
@@ -118,7 +116,7 @@ class KaggleProblemSolver:
 
     def invoke(self, debug=True):
         state = self._init_state()
-        graph.invoke(state, config=self.config)
+        return graph.invoke(state, config=self.config)
 
 
 # Example usage
@@ -126,11 +124,7 @@ if __name__ == "__main__":
     print(".env loaded:", load_dotenv())
     parser = argparse.ArgumentParser("kaggle_scraper")
     parser.add_argument(
-        "--url",
-        help="url to challenge",
-        type=str,
-        required=True,
-        default=True
+        "--url", help="url to challenge", type=str, required=True, default="https://www.kaggle.com/competitions/nlp-getting-started/"
     )
     parser.add_argument(
         "--cached",
@@ -146,6 +140,7 @@ if __name__ == "__main__":
         secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
         host=os.getenv("LANGFUSE_HOST"),
         session_id=f"session-{int(time.time())}",
+
     )
 
     client = MongoClient(
@@ -161,12 +156,11 @@ if __name__ == "__main__":
         "recursion_limit": 50,
         "checkpointer": checkpointer,
     }
-
-    solver = KaggleProblemSolver(config, proxy, client,args)
+    with DockerJupyterServer() as server:
+        solver = KaggleProblemSolver(config, proxy, client, server,args)
     graph = solver.compile(checkpointer)
     # exit()
-    res = solver.invoke()
-    print(res)
+    solver.invoke()
 
     # problem_description = """
     # Predict house prices based on various features.
@@ -181,5 +175,5 @@ if __name__ == "__main__":
     # state_init = KaggleProblemState(problem_description=problem_description)
 
     # final_state = solver.solve_problem(problem_description, dataset_path)
-    print(f"Best score achieved: {res.best_score}")
-    print(f"Final model info: {res.model_info}")
+    # print(f"Best score achieved: {res.best_score}")
+    # print(f"Final model info: {res.model_info}")

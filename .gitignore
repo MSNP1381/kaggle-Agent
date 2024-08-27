@@ -167,3 +167,5 @@ generated_notebooks/*
 misc/
 x.png
 .conda/
+
+x.ipynb

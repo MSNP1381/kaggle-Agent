@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from agent import KaggleProblemSolver
 from langfuse.callback import CallbackHandler
 from logging_module import log_it
-from persistence.postgres import PostgresSaver
 
 
 # Initialize session state variables

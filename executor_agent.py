@@ -12,11 +12,11 @@ class KaggleCodeExecutor:
     def __init__(self, nb_executor):
         self.nb_executor = nb_executor
 
-
         # Add initial imports
         initial_imports = (
             """import pandas as pd\nfrom IPython.display import display, HTML"""
         )
+        # self.nb_executor.create_nb()
         self.nb_executor.test_and_execute(initial_imports)
 
     def execute_code(self, code, task: str):

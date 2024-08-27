@@ -35,25 +35,53 @@ It's like a never-ending dance party, but with more algorithms and less awkward 
 Behold, the pièce de résistance of our project – the Agent Graph! 📊
 
 ```mermaid
-%%{init: {'flowchart': {'curve': 'linear'}}}%%
-graph TD;
- __start__[__start__]:::startclass;
- __end__[__end__]:::endclass;
- code_agent([code_agent]):::otherclass;
- planner([planner]):::otherclass;
- executor([executor]):::otherclass;
- enhancer([enhancer]):::otherclass;
- data_utils([data_utils]):::otherclass;
- __start__ --> data_utils;
- code_agent --> executor;
- data_utils --> planner;
- enhancer --> code_agent;
- planner --> enhancer;
- executor -.-> __end__;
- executor -.-> enhancer;
- classDef startclass fill:#ffdfba;
- classDef endclass fill:#baffc9;
- classDef otherclass fill:#fad7de;
+
+
+graph TB
+    %% Define styles
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style H fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:1px
+    style C fill:#cfc,stroke:#333,stroke-width:1px
+    style D fill:#fcc,stroke:#333,stroke-width:1px
+    style E fill:#ffc,stroke:#333,stroke-width:1px
+    style F fill:#ccf,stroke:#333,stroke-width:1px
+    style G fill:#fcf,stroke:#333,stroke-width:1px
+
+    A((Start)) --> B[Scraper]
+    B --> G[Data Utils]
+    G --> D[Planner]
+    D --> F[Enhancer]
+    F --> C[Code Agent]
+    C --> E[Executor]
+    E -.-> F
+    E -.-> H((Finish))
+
+    subgraph Code_Agent_Process [Code Agent Process]
+        style Code_Agent_Process fill:#cfc,stroke:#333,stroke-width:1px
+        I((Start))
+        J[Generate Code]
+        K{Is Code Valid?}
+        L((Finish))
+        
+        I --> J
+        J --> K
+        K -- Yes --> L
+        K -- No --> J
+    end
+    
+    %% Link the main process to subgraph
+    C -->|Initiates| I
+    L -->|Returns| E
+
+    %% Annotations
+    classDef annotation fill:#fff,stroke:none,color:#333,font-size:12px;
+    class B,G,D,F,C,E annotation;
+    
+    %% Annotating Feedback Loops
+    E -. Feedback Loop .-> F
+    E -. Completion .-> H
+
 ```
 
 This isn't just any graph – it's a visual symphony of our agents working in harmony. Watch as data flows through our system like a well-choreographed ballet of bits and bytes!

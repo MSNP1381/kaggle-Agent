@@ -2,9 +2,24 @@ import json
 import subprocess
 from typing import Any, Dict, List, Literal, Union
 import yaml
+import json
 
 # from states.main import KaggleProblemState
+
 from prompts.utils import DATASET_ANALYSIS_PROMPT
+
+from dataclasses import dataclass, asdict
+
+
+@dataclass
+class CellOutput:
+    output_type: str
+    name: str
+    text: str
+
+    def to_json(self) -> str:
+        # Convert the dataclass to a dictionary and then to a JSON string
+        return json.dumps(asdict(self))
 
 
 def exec_in_venv(code, venv_path="./.venv"):
