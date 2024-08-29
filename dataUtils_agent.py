@@ -58,7 +58,7 @@ class KaggleDataUtils:
         self.output_parser = PydanticOutputParser(pydantic_object=DatUtilState)
         self.chain = self.dataset_analysis_prompt | self.llm | self.output_parser
 
-    def analyze_dataset(self, dataset: pd.DataFrame, data_initial_info):
+    def analyze_dataset(self, dataset: pd.DataFrame, data_initial_info)->DatUtilState:
         """
         Analyzes the dataset and provides a description and preprocessing recommendations.
 
@@ -129,7 +129,13 @@ class KaggleDataUtils:
         result = self.analyze_dataset(
             pd.read_csv(state.dataset_path), state.dataset_info
         )
+
         # print(result)
+        result.dataset_overview +=f"""\n\n  NOTE: if you want to get the dataset dataset path is stored in environment variable : {state.file_env_var}
+for getting value simply execute this code : 
+```python
+dataset_path=os.env["{state.file_env_var}"]
+"""
 
         return {"dataset_info": result.json().replace("\\n", "\n")}
 
@@ -143,7 +149,7 @@ if __name__ == "__main__":
     Predict house prices based on various features.
     The evaluation metric is Root Mean Squared Error (RMSE).
     The dataset contains information about house features and their corresponding sale prices.
-    dataset file name is : "{dataset_path}"
+    remebmer if you want to get the dataset dataset path is stored in environment variable : MY_FILE
     """
 
     print(

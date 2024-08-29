@@ -1,14 +1,10 @@
 import json
-import subprocess
-from typing import Any, Dict, List, Literal, Union
-import yaml
 import json
-
-# from states.main import KaggleProblemState
-
-from prompts.utils import DATASET_ANALYSIS_PROMPT
-
 from dataclasses import dataclass, asdict
+from abc import ABC, abstractmethod
+from typing import List, Optional,Union
+import nbformat
+from e2b_code_interpreter.models import Error,Result,MIMEType
 
 
 @dataclass
@@ -20,32 +16,53 @@ class CellOutput:
     def to_json(self) -> str:
         # Convert the dataclass to a dictionary and then to a JSON string
         return json.dumps(asdict(self))
+    
+class CellError(Exception):
+    def __init__(self,err_instance:Error):
+        self.err_instance=err_instance
+        super().__init__(err_instance.traceback)
+    @property
+    def ename(self)->str:
+        return self.err_instance.name
+    @property
+    def evalue(self)->str:
+        return self.err_instance.value
+    @property
+    def traceback(self)->str:
+        return self.err_instance.traceback
+    
+class CellResult(Result):
+    def __init__(self, result_instance:Result):
+        super().__init__(result_instance.is_main_result,result_instance.extra)
+    @property
+    def output_str(self)->str:
+        self.__str__()
+        
 
+class NotebookExecutorInterface(ABC):
+    
+    
+    def create_nb(self) -> str:
+        pass
 
-def exec_in_venv(code, venv_path="./.venv"):
-    # Construct the Python command
-    python_executable = f"{venv_path}/bin/python"
+    
+    def __init__(self,execution_instance) -> None:
+        self.executor=None
+        self.is_restarted=False
+        
 
-    # Use subprocess to run the code in the specified virtual environment
-    process = subprocess.Popen(
-        [python_executable, "-c", code],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    
+    def test_and_execute(self, new_code: str) ->Union[ CellResult,List[CellResult]] :
+        pass
 
-    # Capture output and errors
-    stdout, stderr = process.communicate()
-
-    # Check if the process executed successfully
-    if process.returncode != 0:
-        error_message = (
-            f"Execution failed with return code {process.returncode}.\nStderr: {stderr}"
-        )
-        raise (error_message)
-
-    return stdout
-
+    
+    def process_cell_output(self,) -> Optional[str]:
+        pass
+    
+    def reset(self)->None:
+        pass
+  
+    
 
 def dict_concat(a, b):
     return {**a, **b}

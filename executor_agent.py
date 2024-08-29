@@ -5,11 +5,11 @@ from nbexecutor import (
     NBExecutor,
 )  # Assuming NBExecutor is in a file named nbexecutor.py
 from states.main import KaggleProblemState
-from utils import cc
+from utils import NotebookExecutorInterface, cc
 
 
 class KaggleCodeExecutor:
-    def __init__(self, nb_executor):
+    def __init__(self, nb_executor:NotebookExecutorInterface):
         self.nb_executor = nb_executor
 
         # Add initial imports
@@ -27,35 +27,8 @@ class KaggleCodeExecutor:
             + "\n"
             + code.code
         )
-
-        # Add the code to the notebook
-        self.nb_executor.add_nb_code_block(code_txt)
-
-        # Execute the notebook
-        self.nb_executor.execute_notebook()
-
-        # Get the latest output
-        output = self.nb_executor.get_latest_output()
-
-        return cc("\n-".join(output))
-
-    # def get_dataframe(self, variable_name):
-    #     # Add a code block to display the dataframe
-    #     display_code = f'print("""\n{variable_name}\n""")'
-    #     self.nb_executor.add_nb_code_block(display_code)
-    #     self.nb_executor.execute_notebook()
-
-    #     # Get the output (which should be the displayed dataframe)
-    #     return self.nb_executor.get_latest_output()
-
-    # def get_variable(self, variable_name):
-    #     # Add a code block to print the variable
-    #     print_code = f'print("""\n{variable_name}""")'
-    #     self.nb_executor.add_nb_code_block(print_code)
-    #     self.nb_executor.execute_notebook()
-
-    #     # Get the output (which should be the printed variable)
-    #     return self.nb_executor.get_latest_output()
+        output = self.nb_executor.test_and_execute(code_txt)
+        return cc("\n-".join(str(output)))
 
     def __call__(self, state: KaggleProblemState):
         enhanced_task = state.enhanced_tasks[state.index]

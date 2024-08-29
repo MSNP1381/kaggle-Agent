@@ -82,7 +82,7 @@ class ScrapeKaggle:
         # if os.getenv("HTTP_PROXY_URL", None):
         chrome_options.add_argument(f"--proxy-server=http://127.0.0.1:2080")
         chrome_options.add_argument("--blink-settings=imagesEnabled=false")
-        chrome_options.add_argument("--headless=new")
+        # chrome_options.add_argument("--headless=new")
         driver = webdriver.Chrome(
             # service=
             options=chrome_options

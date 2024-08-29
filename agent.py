@@ -1,3 +1,4 @@
+#!/home/msnp/miniconda3/envs/kaggle_agent/bin/python
 import argparse
 import json
 import time
@@ -11,6 +12,7 @@ from code_generation_agent import CodeGenerationAgent, CodeGraphState
 
 # from NBExecutorAutoGen import JupyterNBExecutor
 from kaggle_scaper import ScrapeKaggle
+from nbexecuter_e2b import E2B_executor, SandboxManager
 from nbexecutor_autoGen import NBExecutorAutoGen
 from nbexecutor import NBExecutor
 from persistence.mongo import MongoDBSaver
@@ -44,24 +46,28 @@ class KaggleProblemSolver:
         self.proxy = proxy
         # self.nb_executor = NBExecutor()
 
-        self.nb_executor = NBExecutorAutoGen(server)
+        self.nb_executor = E2B_executor(server)
         self.code_agent = CodeGenerationAgent(
             config, proxy=proxy, nb_executor=self.nb_executor
         )
         self.scraper = ScrapeKaggle(self.client, self.config)
         self.planner = KaggleProblemPlanner(config, proxy=proxy)
         self.re_planner = KaggleProblemRePlanner(config, proxy=proxy)
-        self.executor = KaggleCodeExecutor(self.nb_executor)
+        # self.executor = KaggleCodeExecutor(self.nb_executor)
         self.enhancer = KaggleTaskEnhancer(config, proxy=proxy)
         self.data_utils = KaggleDataUtils(config, proxy)
         # self._init_state()
 
     def _init_state(self):
-        self.dataset_path = "./train.csv"
+        self.dataset_path = "train.csv"
         # self.nb_executor.create_nb()
-        self.nb_executor.upload_file_to_jupyter(self.dataset_path)
+        f=open(self.dataset_path)
+        env_var=self.nb_executor.upload_file_env(f)
+        
+        f.close()
         return KaggleProblemState(
             **{
+                'file_env_var':env_var,
                 "challenge_url": self.url,
                 "dataset_path": self.dataset_path,
             }
@@ -93,7 +99,7 @@ class KaggleProblemSolver:
         graph_builder.add_node("code_agent", self.code_agent)
         graph_builder.add_node("planner", self.planner)
         # graph_builder.add_node("re_planner", self.re_planner)
-        graph_builder.add_node("executor", self.executor)
+        # graph_builder.add_node("executor", self.executor)
         graph_builder.add_node("enhancer", self.enhancer)
         graph_builder.add_node("data_utils", self.data_utils)
 
@@ -104,76 +110,61 @@ class KaggleProblemSolver:
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
 
         graph_builder.add_edge("enhancer", "code_agent")
-        graph_builder.add_edge("code_agent", "executor")
+        # graph_builder.add_edge("code_agent", "executor")
         graph_builder.add_conditional_edges(
-            "executor", self.is_plan_done, path_map={END: END, "enhancer": "enhancer"}
+            "code_agent", self.is_plan_done, path_map={END: END, "enhancer": "enhancer"}
         )
 
         # memory = SqliteSaver.from_conn_string(":memory:")
 
-        self.graph = graph_builder.compile(checkpointer=checkpointer)
+        self.graph = graph_builder.compile(checkpointer=checkpointer,debug=True)
         return self.graph
 
-    def invoke(self, debug=True):
+    def invoke(self, debug=False):
         state = self._init_state()
-        return graph.invoke(state, config=self.config)
+        return graph.invoke(state, config=self.config,debug=debug)
 
 
 # Example usage
 if __name__ == "__main__":
     print(".env loaded:", load_dotenv())
-    parser = argparse.ArgumentParser("kaggle_scraper")
-    parser.add_argument(
-        "--url", help="url to challenge", type=str, required=True, default="https://www.kaggle.com/competitions/nlp-getting-started/"
-    )
-    parser.add_argument(
-        "--cached",
-        help="use cached version",
-        type=bool,
-        required=False,
-    )
-    args = parser.parse_args()
-    proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
+    with SandboxManager() as server:
+        
+        parser = argparse.ArgumentParser("kaggle_scraper")
+        parser.add_argument(
+            "--url", help="url to challenge", type=str, required=False, default="https://www.kaggle.com/competitions/nlp-getting-started/"
+        )
+        parser.add_argument(
+            "--cached",
+            help="use cached version",
+            type=bool,
+            required=False,
+        )
+        args = parser.parse_args()
+        proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
 
-    langfuse_handler = CallbackHandler(
-        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-        secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-        host=os.getenv("LANGFUSE_HOST"),
-        session_id=f"session-{int(time.time())}",
+        # langfuse_handler = CallbackHandler(
+        #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+        #     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+        #     host=os.getenv("LANGFUSE_HOST"),
+        #     session_id=f"session-{int(time.time())}",
 
-    )
+        # )
 
-    client = MongoClient(
-        host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
-    )
-    checkpointer = MongoDBSaver(client, db_name="checkpoints")
+        client = MongoClient(
+            host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
+        )
+        checkpointer = MongoDBSaver(client, db_name="checkpoints")
 
-    config = {
-        "configurable": {"thread_id": str(int(time.time()))},
-        # "callbacks": [
-        #     langfuse_handler,  # handler_1,handler_2
-        # ],
-        "recursion_limit": 50,
-        "checkpointer": checkpointer,
-    }
-    with DockerJupyterServer() as server:
+        config = {
+            "configurable": {"thread_id": str(int(time.time()))},
+            # "callbacks": [
+            #     langfuse_handler,  # handler_1,handler_2
+            # ],
+            "recursion_limit": 50,
+            "checkpointer": checkpointer,
+        }
         solver = KaggleProblemSolver(config, proxy, client, server,args)
-    graph = solver.compile(checkpointer)
-    # exit()
-    solver.invoke()
-
-    # problem_description = """
-    # Predict house prices based on various features.
-    # The evaluation metric is Root Mean Squared Error (RMSE).
-    # The dataset contains information about house features and their corresponding sale prices.
-    # data set file name is : "./house_prices.csv"
-    # """
-    # data_set_path = "./generated_notebooks/house_prices.csv"
-
-    # dataset_path = "house_prices.csv"  # Replace with actual path
-
-    # state_init = KaggleProblemState(problem_description=problem_description)
-
-    # final_state = solver.solve_problem(problem_description, dataset_path)
-    # print(f"Best score achieved: {res.best_score}")
-    # print(f"Final model info: {res.model_info}")
+        graph = solver.compile(checkpointer)
+        # exit()
+        solver.invoke(True)

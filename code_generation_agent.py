@@ -20,7 +20,7 @@ from prompts.code_generation_prompt import (
 
 import re
 
-from utils import cc
+from utils import CellError, NotebookExecutorInterface, cc
 
 
 def remove_color(text):
@@ -64,7 +64,7 @@ class CodeGenerationAgent:
         self,
         config,
         proxy,
-        nb_executor,
+        nb_executor:NotebookExecutorInterface,
         model="gpt-4o-mini",
         max_iterations=3,
         base_url="https://api.avalai.ir/v1",
@@ -89,10 +89,6 @@ class CodeGenerationAgent:
         self.code_gen_chain = self.code_gen_prompt | self.llm
 
         self.workflow = self.create_workflow()
-        s=self.workflow.get_graph().draw_mermaid()        
-        with open("code_mermaid.txt",'w')as f:
-            f.write(s)
-        print(s)
 
     def generate(self, state: CodeGraphState):
         print("---GENERATING CODE SOLUTION---")
@@ -185,7 +181,7 @@ code is :
         imports = code_solution.imports
         code = code_solution.code
 
-        try:
+        try:#
             result = self.nb_executor.test_and_execute(imports + "\n" + code)
             print("---NO CODE TEST FAILURES---")
             return {
@@ -194,7 +190,8 @@ code is :
                 "error": "no",
                 "result": result,
             }
-        except Exception as e:
+        except CellError as e:
+            
             print(f"---CODE CHECK FAILED: {e.ename}---")
 
             m = [
@@ -256,6 +253,7 @@ explain what error it is and how to solve it
         workflow = StateGraph(CodeGraphState)
 
         workflow.add_node("generate", self.generate)
+        workflow.add_node("reset_procedure", self.__reset_procedure)
         # workflow.add_node("extract_var_ast", self.extract_variables_from_ast)
         # workflow.add_node(
         #     "check_and_correct_variables", self.check_and_correct_variables
@@ -267,14 +265,23 @@ explain what error it is and how to solve it
 
         workflow.add_edge(START, "generate")
         workflow.add_edge("generate", "check_code")
+        workflow.add_edge("reset_procedure",'generate')
         # workflow.add_edge("extract_var_ast", "check_and_correct_variables")
         # workflow.add_edge("check_and_correct_variables", "check_code")
+        workflow.add_conditional_edges(
+            "check_code",
+            lambda x:x['error']=='yes',
+            {
+                False: END,
+                True: "reset_procedure",
+            },
+        )
         workflow.add_conditional_edges(
             "check_code",
             self.decide_to_finish,
             {
                 "end": END,
-                "generate": "generate",
+                "generate": "reset_procedure",
             },
         )
 
@@ -321,6 +328,23 @@ explain what error it is and how to solve it
             "messages": messages,
             "iterations": iterations,
         }
+    def __reset_procedure(self,state: CodeGraphState):
+        kaggle_state=state["kaggle_state"]
+        task_codes_results=kaggle_state.task_codes_results
+        
+        new_task_codes=[]
+        self.nb_executor.reset()
+        for t,c,r in task_codes_results:
+            try:
+                new_result=self.nb_executor.test_and_execute(str(c))
+                new_task_codes.append((t,c,new_result))
+            except Exception as e :
+                raise e
+            
+        kaggle_state.task_codes_results=new_task_codes
+        self.nb_executor.is_restarted=False
+        return {"error":'no','kaggle_state':kaggle_state}
+            
 
     def __call__(self, state: KaggleProblemState):
         initial_state = {
