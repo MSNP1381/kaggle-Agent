@@ -137,13 +137,14 @@ class ScrapeKaggle:
         return result
 
     def summarize_data(self, description, evaluation, data_details):
-        parser = PydanticOutputParser(pydantic_object=Evaluation)
+        eval_parser = PydanticOutputParser(pydantic_object=Evaluation)
+        data_parser = PydanticOutputParser(pydantic_object=Evaluation)
 
         desc_inp = ChatPromptTemplate.from_messages(
             CHALLENGE_DESCRIPTOIN_PROMPT
         ).format(text=description)
         eval_inp = ChatPromptTemplate.from_messages(CHALLENGE_EVALUATION_PROMPT).format(
-            text=evaluation, format_instructions=parser.get_format_instructions()
+            text=evaluation, format_instructions=eval_parser.get_format_instructions()
         )
         data_inp = ChatPromptTemplate.from_messages(CHALLENGE_DATA_PROMPT).format(
             text=data_details
@@ -153,7 +154,7 @@ class ScrapeKaggle:
             {
                 "summarized": {
                     "description": results[0].content,
-                    "evaluation": parser.invoke(results[1]).dict(),
+                    "evaluation": eval_parser.invoke(results[1]).dict(),
                     "data_details": results[2].content,
                 }
             }
@@ -161,7 +162,7 @@ class ScrapeKaggle:
         self.scraped_data_collection.insert_one(self.mongo_dict)
         return {
             "description": results[0].content,
-            "evaluation": parser.invoke(results[1]),
+            "evaluation": eval_parser.invoke(results[1]),
             "data_details": results[2].content,
         }
 
