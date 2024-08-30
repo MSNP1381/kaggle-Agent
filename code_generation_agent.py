@@ -20,7 +20,7 @@ from prompts.code_generation_prompt import (
 
 import re
 
-from utils import CellError, NotebookExecutorInterface, cc
+from utils import CellError, NotebookExecutorInterface, cc, exec2s
 
 
 def remove_color(text):
@@ -52,6 +52,7 @@ class GeneratedCode(BaseModel):
 
 class CodeGraphState(TypedDict):
     error: str
+    erro_msg:str
     generation: GeneratedCode
     iterations: int
     kaggle_state: KaggleProblemState
@@ -130,7 +131,6 @@ code is :
 
         # Check and correct variables
 
-        iterations += 1
         return {
             "generation": code_solution,
             "iterations": iterations,
@@ -183,6 +183,7 @@ code is :
 
         try:#
             result = self.nb_executor.test_and_execute(imports + "\n" + code)
+            result= exec2s(result)
             print("---NO CODE TEST FAILURES---")
             return {
                 "generation": code_solution,
@@ -231,10 +232,13 @@ explain what error it is and how to solve it
                 config=self.config,
             )
             m += [("ai", res)]
+            
             return {
                 "generation": code_solution,
                 "iterations": iterations,
                 "error": "yes",
+        'erro_msg':e.traceback,
+                'iteration':state['iterations'] + 1,
                 "messages": m,
             }
 
@@ -245,6 +249,8 @@ explain what error it is and how to solve it
         if error == "no" or iterations == self.max_iterations:
             print("---DECISION: FINISH---")
             return "end"
+        elif error=='yes' :
+            return "reset_procedure"
         else:
             print("---DECISION: RE-TRY SOLUTION---", "iters No.", iterations)
             return "generate"
@@ -270,18 +276,11 @@ explain what error it is and how to solve it
         # workflow.add_edge("check_and_correct_variables", "check_code")
         workflow.add_conditional_edges(
             "check_code",
-            lambda x:x['error']=='yes',
-            {
-                False: END,
-                True: "reset_procedure",
-            },
-        )
-        workflow.add_conditional_edges(
-            "check_code",
             self.decide_to_finish,
             {
                 "end": END,
-                "generate": "reset_procedure",
+                "generate": "generate",
+                'reset_procedure':'reset_procedure'
             },
         )
 
@@ -337,7 +336,7 @@ explain what error it is and how to solve it
         for t,c,r in task_codes_results:
             try:
                 new_result=self.nb_executor.test_and_execute(str(c))
-                new_task_codes.append((t,c,new_result))
+                new_task_codes.append((t,c,exec2s(new_result)))
             except Exception as e :
                 raise e
             

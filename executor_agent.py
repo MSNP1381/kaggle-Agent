@@ -5,7 +5,7 @@ from nbexecutor import (
     NBExecutor,
 )  # Assuming NBExecutor is in a file named nbexecutor.py
 from states.main import KaggleProblemState
-from utils import NotebookExecutorInterface, cc
+from utils import NotebookExecutorInterface, cc, exec2s
 
 
 class KaggleCodeExecutor:
@@ -28,7 +28,7 @@ class KaggleCodeExecutor:
             + code.code
         )
         output = self.nb_executor.test_and_execute(code_txt)
-        return cc("\n-".join(str(output)))
+        return cc(exec2s(output))
 
     def __call__(self, state: KaggleProblemState):
         enhanced_task = state.enhanced_tasks[state.index]
