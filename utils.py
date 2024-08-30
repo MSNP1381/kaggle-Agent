@@ -70,3 +70,11 @@ def dict_concat(a, b):
 
 def cc(s: str):
     return s.replace("\\n", "\n")
+
+def exec2s(data:Union[ CellResult,List[CellResult]])->str:
+    out_s=''
+    if isinstance(data,List):
+         out_s='\n-----------------\n'.join(str(data))
+    else:
+        out_s=str(data)
+    return out_s
