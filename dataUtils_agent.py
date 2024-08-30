@@ -40,7 +40,7 @@ class DatUtilState(BaseModel):
 
 
 class KaggleDataUtils:
-    def __init__(self, config, proxy, base_url="https://api.avalai.ir/v1"):
+    def __init__(self, config, proxy, llm: ChatOpenAI):
         """
         Initializes the KaggleDataUtils with configuration and proxy settings.
 
@@ -49,9 +49,7 @@ class KaggleDataUtils:
             proxy (httpx.Client): HTTP client for proxy settings.
         """
         self.config = config
-        self.llm = ChatOpenAI(
-            base_url=base_url, model="gpt-4o-mini", http_client=proxy, temperature=0
-        )
+        self.llm = llm
         self.dataset_analysis_prompt = ChatPromptTemplate.from_template(
             DATASET_ANALYSIS_PROMPT
         )
@@ -131,12 +129,13 @@ class KaggleDataUtils:
         )
 
         # print(result)
-        result.dataset_overview +=f"""\n\n  NOTE: if you want to get the dataset dataset path is stored in environment variable : {state.file_env_var}
-for getting value simply execute this code : 
-```python
-dataset_path=os.env["{state.file_env_var}"]
-"""
+#         result.dataset_overview +=f"""\n\n  NOTE: if you want to get the dataset dataset path is stored in environment variable : {state.file_env_var}
+# for getting value simply execute this code : 
+# ```python
+# dataset_path=os.getenv["{state.file_env_var}"]
+# """
 
+        result.dataset_overview+= f" dataset path is : {state.dataset_path}"
         return {"dataset_info": result.json().replace("\\n", "\n")}
 
 

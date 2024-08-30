@@ -25,7 +25,7 @@ class KaggleProblemPlanner:
     A class to plan and manage tasks for solving a Kaggle machine learning problem.
     """
 
-    def __init__(self, config, proxy, base_url="https://api.avalai.ir/v1"):
+    def __init__(self, config, proxy, llm: ChatOpenAI):
         """
         Initializes the KaggleProblemPlanner with configuration, proxy, and notebook executor.
 
@@ -36,9 +36,7 @@ class KaggleProblemPlanner:
         """
         self.config = config
         # self.nb_executor = nb_executor
-        self.llm = ChatOpenAI(
-            base_url=base_url, model="gpt-4o-mini", http_client=proxy, temperature=0.7
-        )
+        self.llm = llm
         # self.code_generation_agent = CodeGenerationAgent(config=config, proxy=proxy, nb_executor=self.nb_executor)
         self.planner_prompt = PLANNER_PROMPT
 

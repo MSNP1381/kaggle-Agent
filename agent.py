@@ -1,74 +1,63 @@
 #!/home/msnp/miniconda3/envs/kaggle_agent/bin/python
 import argparse
-import json
 import time
 import httpx
-from autogen.coding.jupyter import DockerJupyterServer
+from injector import inject
 from langgraph.graph import StateGraph, START, END
-from psycopg_pool import ConnectionPool
 from pymongo import MongoClient
-
-from code_generation_agent import CodeGenerationAgent, CodeGraphState
-
-# from NBExecutorAutoGen import JupyterNBExecutor
+from code_generation_agent import CodeGenerationAgent
 from kaggle_scaper import ScrapeKaggle
 from nbexecuter_e2b import E2B_executor, SandboxManager
-from nbexecutor_autoGen import NBExecutorAutoGen
-from nbexecutor import NBExecutor
 from persistence.mongo import MongoDBSaver
-
 from planner_agent import KaggleProblemPlanner
 from replanner import KaggleProblemRePlanner
-from executor_agent import KaggleCodeExecutor
 from dotenv import load_dotenv
 import os
-from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
 from dataUtils_agent import KaggleDataUtils
 
-# from loguru import logger
-from datetime import datetime
-
-
-# print)
-# logfile = f"misc/logs/output{datetime.now().__str__()}.log"
-
-
 class KaggleProblemSolver:
-    def __init__(self, config, proxy, client,server, args):
-        self.url = args.url
-        # super().__init__()
+    @inject
+    def __init__(
+        self,
+        config: dict,
+        proxy: httpx.Client,
+        client: MongoClient,
+        server: SandboxManager,
+        nb_executor: E2B_executor,
+        scraper: ScrapeKaggle,
+        planner: KaggleProblemPlanner,
+        re_planner: KaggleProblemRePlanner,
+        enhancer: KaggleTaskEnhancer,
+        data_utils: KaggleDataUtils,
+        code_agent: CodeGenerationAgent
+    ):
         self.config = config
-        self.client = client
-        print(os.getenv("HTTP_PROXY_URL"))
-        print("---" * 10)
         self.proxy = proxy
-        # self.nb_executor = NBExecutor()
+        self.client = client
+        self.server = server
+        self.nb_executor = nb_executor
+        self.scraper = scraper
+        self.planner = planner
+        self.re_planner = re_planner
+        self.enhancer = enhancer
+        self.data_utils = data_utils
+        self.code_agent = code_agent
 
-        self.nb_executor = E2B_executor(server)
-        self.code_agent = CodeGenerationAgent(
-            config, proxy=proxy, nb_executor=self.nb_executor
-        )
-        self.scraper = ScrapeKaggle(self.client, self.config)
-        self.planner = KaggleProblemPlanner(config, proxy=proxy)
-        self.re_planner = KaggleProblemRePlanner(config, proxy=proxy)
-        # self.executor = KaggleCodeExecutor(self.nb_executor)
-        self.enhancer = KaggleTaskEnhancer(config, proxy=proxy)
-        self.data_utils = KaggleDataUtils(config, proxy)
-        # self._init_state()
-
-    def _init_state(self):
-        self.dataset_path = "train.csv"
+    def _init_state(self,url:str):
+        self.dataset_path = "./train.csv"
         # self.nb_executor.create_nb()
         f=open(self.dataset_path)
         env_var=self.nb_executor.upload_file_env(f)
+        print(*self.nb_executor.executor.filesystem.list('/home/user'),sep="\n")
+        print(*self.nb_executor.executor.env_vars.items(),sep="\n")
         
         f.close()
         return KaggleProblemState(
             **{
                 'file_env_var':env_var,
-                "challenge_url": self.url,
+                "challenge_url": url,
                 "dataset_path": self.dataset_path,
             }
         )
@@ -120,8 +109,9 @@ class KaggleProblemSolver:
         self.graph = graph_builder.compile(checkpointer=checkpointer,debug=True)
         return self.graph
 
-    def invoke(self, debug=False):
-        state = self._init_state()
+    def invoke(self,url:str, debug=False):
+        state = self._init_state(url)
+        
         return graph.invoke(state, config=self.config,debug=debug)
 
 

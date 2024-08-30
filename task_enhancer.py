@@ -8,15 +8,9 @@ from states.main import KaggleProblemState
 
 
 class KaggleTaskEnhancer:
-    def __init__(self, config, proxy, base_url="https://api.avalai.ir/v1"):
+    def __init__(self, config, proxy,llm: ChatOpenAI):
         self.config = config
-        self.llm = ChatOpenAI(
-            base_url="https://api.avalai.ir/v1",
-            model="gpt-4o-mini",
-            http_client=proxy,
-            temperature=0,
-        )
-
+        self.llm = llm
         self.task_enhancement_prompt = ChatPromptTemplate.from_messages(
             [
                 (

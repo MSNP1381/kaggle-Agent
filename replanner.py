@@ -26,11 +26,9 @@ class RePlanDecision(BaseModel):
 
 
 class KaggleProblemRePlanner:
-    def __init__(self, config, proxy, base_url="https://api.avalai.ir/v1"):
+    def __init__(self, config, proxy, llm: ChatOpenAI):
         self.config = config
-        self.llm = ChatOpenAI(
-            base_url=base_url, model="gpt-4o-mini", http_client=proxy, temperature=0
-        )
+        self.llm = llm
         self.output_parser = PydanticOutputParser(pydantic_object=RePlanDecision)
 
         self.re_plan_prompt = ChatPromptTemplate.from_messages(
