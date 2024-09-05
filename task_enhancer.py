@@ -8,7 +8,7 @@ from states.main import KaggleProblemState
 
 
 class KaggleTaskEnhancer:
-    def __init__(self, config, proxy,llm: ChatOpenAI):
+    def __init__(self, config, proxy, llm: ChatOpenAI):
         self.config = config
         self.llm = llm
         self.task_enhancement_prompt = ChatPromptTemplate.from_messages(

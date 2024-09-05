@@ -38,9 +38,6 @@ class NBExecutorAutoGen:
         )
         self.executor = JupyterCodeExecutor(self.server)
 
-    
-
-
     def upload_file_to_jupyter(self, local_file_path, remote_file_path=None):
         """
         Uploads a file to the Jupyter server.

@@ -7,7 +7,7 @@ from langgraph.graph import StateGraph, START, END
 from pymongo import MongoClient
 from code_generation_agent import CodeGenerationAgent
 from kaggle_scaper import ScrapeKaggle
-from nbexecuter_e2b import E2B_executor, SandboxManager
+from executors.nbexecuter_e2b import E2B_executor, SandboxManager
 from persistence.mongo import MongoDBSaver
 from planner_agent import KaggleProblemPlanner
 from replanner import KaggleProblemRePlanner
@@ -16,6 +16,7 @@ import os
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
 from dataUtils_agent import KaggleDataUtils
+
 
 class KaggleProblemSolver:
     @inject
@@ -31,7 +32,7 @@ class KaggleProblemSolver:
         re_planner: KaggleProblemRePlanner,
         enhancer: KaggleTaskEnhancer,
         data_utils: KaggleDataUtils,
-        code_agent: CodeGenerationAgent
+        code_agent: CodeGenerationAgent,
     ):
         self.config = config
         self.proxy = proxy
@@ -45,18 +46,18 @@ class KaggleProblemSolver:
         self.data_utils = data_utils
         self.code_agent = code_agent
 
-    def _init_state(self,url:str):
+    def _init_state(self, url: str):
         self.dataset_path = "./train.csv"
         # self.nb_executor.create_nb()
-        f=open(self.dataset_path)
-        env_var=self.nb_executor.upload_file_env(f)
-        print(*self.nb_executor.executor.filesystem.list('/home/user'),sep="\n")
-        print(*self.nb_executor.executor.env_vars.items(),sep="\n")
-        
+        f = open(self.dataset_path)
+        env_var = self.nb_executor.upload_file_env(f)
+        print(*self.nb_executor.executor.filesystem.list("/home/user"), sep="\n")
+        print(*self.nb_executor.executor.env_vars.items(), sep="\n")
+
         f.close()
         return KaggleProblemState(
             **{
-                'file_env_var':env_var,
+                "file_env_var": env_var,
                 "challenge_url": url,
                 "dataset_path": self.dataset_path,
             }
@@ -106,23 +107,27 @@ class KaggleProblemSolver:
 
         # memory = SqliteSaver.from_conn_string(":memory:")
 
-        self.graph = graph_builder.compile(checkpointer=checkpointer,debug=True)
+        self.graph = graph_builder.compile(checkpointer=checkpointer, debug=True)
         return self.graph
 
-    def invoke(self,url:str, debug=False):
+    def invoke(self, url: str, debug=False):
         state = self._init_state(url)
-        
-        return graph.invoke(state, config=self.config,debug=debug)
+
+        return graph.invoke(state, config=self.config, debug=debug)
 
 
 # Example usage
 if __name__ == "__main__":
     print(".env loaded:", load_dotenv())
     with SandboxManager() as server:
-        
+
         parser = argparse.ArgumentParser("kaggle_scraper")
         parser.add_argument(
-            "--url", help="url to challenge", type=str, required=False, default="https://www.kaggle.com/competitions/nlp-getting-started/"
+            "--url",
+            help="url to challenge",
+            type=str,
+            required=False,
+            default="https://www.kaggle.com/competitions/nlp-getting-started/",
         )
         parser.add_argument(
             "--cached",
@@ -154,7 +159,7 @@ if __name__ == "__main__":
             "recursion_limit": 50,
             "checkpointer": checkpointer,
         }
-        solver = KaggleProblemSolver(config, proxy, client, server,args)
+        solver = KaggleProblemSolver(config, proxy, client, server, args)
         graph = solver.compile(checkpointer)
         # exit()
         solver.invoke(True)

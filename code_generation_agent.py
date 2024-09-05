@@ -52,7 +52,7 @@ class GeneratedCode(BaseModel):
 
 class CodeGraphState(TypedDict):
     error: str
-    erro_msg:str
+    erro_msg: str
     generation: GeneratedCode
     iterations: int
     kaggle_state: KaggleProblemState
@@ -65,7 +65,7 @@ class CodeGenerationAgent:
         self,
         config,
         proxy,
-        nb_executor:NotebookExecutorInterface,
+        nb_executor: NotebookExecutorInterface,
         model="gpt-4o-mini",
         max_iterations=3,
         base_url="https://api.avalai.ir/v1",
@@ -181,9 +181,9 @@ code is :
         imports = code_solution.imports
         code = code_solution.code
 
-        try:#
+        try:  #
             result = self.nb_executor.test_and_execute(imports + "\n" + code)
-            result= exec2s(result)
+            result = exec2s(result)
             print("---NO CODE TEST FAILURES---")
             return {
                 "generation": code_solution,
@@ -192,7 +192,7 @@ code is :
                 "result": result,
             }
         except CellError as e:
-            
+
             print(f"---CODE CHECK FAILED: {e.ename}---")
 
             m = [
@@ -232,13 +232,13 @@ explain what error it is and how to solve it
                 config=self.config,
             )
             m += [("ai", res)]
-            
+
             return {
                 "generation": code_solution,
                 "iterations": iterations,
                 "error": "yes",
-        'erro_msg':e.traceback,
-                'iteration':state['iterations'] + 1,
+                "erro_msg": e.traceback,
+                "iteration": state["iterations"] + 1,
                 "messages": m,
             }
 
@@ -249,7 +249,7 @@ explain what error it is and how to solve it
         if error == "no" or iterations == self.max_iterations:
             print("---DECISION: FINISH---")
             return "end"
-        elif error=='yes' :
+        elif error == "yes":
             return "reset_procedure"
         else:
             print("---DECISION: RE-TRY SOLUTION---", "iters No.", iterations)
@@ -271,17 +271,13 @@ explain what error it is and how to solve it
 
         workflow.add_edge(START, "generate")
         workflow.add_edge("generate", "check_code")
-        workflow.add_edge("reset_procedure",'generate')
+        workflow.add_edge("reset_procedure", "generate")
         # workflow.add_edge("extract_var_ast", "check_and_correct_variables")
         # workflow.add_edge("check_and_correct_variables", "check_code")
         workflow.add_conditional_edges(
             "check_code",
             self.decide_to_finish,
-            {
-                "end": END,
-                "generate": "generate",
-                'reset_procedure':'reset_procedure'
-            },
+            {"end": END, "generate": "generate", "reset_procedure": "reset_procedure"},
         )
 
         return workflow.compile(debug=True)
@@ -327,23 +323,23 @@ explain what error it is and how to solve it
             "messages": messages,
             "iterations": iterations,
         }
-    def __reset_procedure(self,state: CodeGraphState):
-        kaggle_state=state["kaggle_state"]
-        task_codes_results=kaggle_state.task_codes_results
-        
-        new_task_codes=[]
+
+    def __reset_procedure(self, state: CodeGraphState):
+        kaggle_state = state["kaggle_state"]
+        task_codes_results = kaggle_state.task_codes_results
+
+        new_task_codes = []
         self.nb_executor.reset()
-        for t,c,r in task_codes_results:
+        for t, c, r in task_codes_results:
             try:
-                new_result=self.nb_executor.test_and_execute(str(c))
-                new_task_codes.append((t,c,exec2s(new_result)))
-            except Exception as e :
+                new_result = self.nb_executor.test_and_execute(str(c))
+                new_task_codes.append((t, c, exec2s(new_result)))
+            except Exception as e:
                 raise e
-            
-        kaggle_state.task_codes_results=new_task_codes
-        self.nb_executor.is_restarted=False
-        return {"error":'no','kaggle_state':kaggle_state}
-            
+
+        kaggle_state.task_codes_results = new_task_codes
+        self.nb_executor.is_restarted = False
+        return {"error": "no", "kaggle_state": kaggle_state}
 
     def __call__(self, state: KaggleProblemState):
         initial_state = {

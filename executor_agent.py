@@ -1,15 +1,10 @@
-import pandas as pd
-from IPython.display import display, HTML
-
-from nbexecutor import (
-    NBExecutor,
-)  # Assuming NBExecutor is in a file named nbexecutor.py
+from dataUtils_agent import data_util
 from states.main import KaggleProblemState
 from utils import NotebookExecutorInterface, cc, exec2s
 
 
 class KaggleCodeExecutor:
-    def __init__(self, nb_executor:NotebookExecutorInterface):
+    def __init__(self, nb_executor: NotebookExecutorInterface):
         self.nb_executor = nb_executor
 
         # Add initial imports

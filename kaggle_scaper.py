@@ -26,11 +26,13 @@ from prompts.summarizer_prompt import (
     CHALLENGE_EVALUATION_PROMPT,
 )
 from states.main import KaggleProblemState
+
 """
 TODO: [ ] get description about target and how to achieve results
 - [ ] make all outputs as pydantic objects 
 
 """
+
 
 class Evaluation(BaseModel):
     description: str = Field(description="usefull description for evaluating data")

@@ -56,7 +56,7 @@ class KaggleDataUtils:
         self.output_parser = PydanticOutputParser(pydantic_object=DatUtilState)
         self.chain = self.dataset_analysis_prompt | self.llm | self.output_parser
 
-    def analyze_dataset(self, dataset: pd.DataFrame, data_initial_info)->DatUtilState:
+    def analyze_dataset(self, dataset: pd.DataFrame, data_initial_info) -> DatUtilState:
         """
         Analyzes the dataset and provides a description and preprocessing recommendations.
 
@@ -129,13 +129,13 @@ class KaggleDataUtils:
         )
 
         # print(result)
-#         result.dataset_overview +=f"""\n\n  NOTE: if you want to get the dataset dataset path is stored in environment variable : {state.file_env_var}
-# for getting value simply execute this code : 
-# ```python
-# dataset_path=os.getenv["{state.file_env_var}"]
-# """
+        #         result.dataset_overview +=f"""\n\n  NOTE: if you want to get the dataset dataset path is stored in environment variable : {state.file_env_var}
+        # for getting value simply execute this code :
+        # ```python
+        # dataset_path=os.getenv["{state.file_env_var}"]
+        # """
 
-        result.dataset_overview+= f" dataset path is : {state.dataset_path}"
+        result.dataset_overview += f" dataset path is : {state.dataset_path}"
         return {"dataset_info": result.json().replace("\\n", "\n")}
 
 

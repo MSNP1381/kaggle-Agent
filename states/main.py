@@ -21,7 +21,8 @@ class KaggleProblemState(BaseModel):
     evaluation_metric: Optional[str] = Field(default=None)
     best_score: Optional[float] = Field(default=None)
     enhanced_tasks: Annotated[List[EnhancedTask], add] = Field(default=None)
-    file_env_var:str=None
+    file_env_var: str = None
+
     def get_task_results(self, to_str=True):
         l = []
         for index_, cr in enumerate(self.task_codes_results):

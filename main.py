@@ -7,6 +7,7 @@ from persistence.mongo import MongoDBSaver
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
+
 def main():
     print(".env loaded:", load_dotenv())
 
@@ -16,8 +17,8 @@ def main():
         help="url to challenge",
         type=str,
         required=False,
-        default=config_reader.get('Kaggle', 'default_challenge_url')
-       )
+        default=config_reader.get("Kaggle", "default_challenge_url"),
+    )
     args = parser.parse_args()
 
     # Create the injector and get the AppModule
@@ -27,7 +28,9 @@ def main():
     with app_module.sandbox_manager as server:
         # Get the MongoDB client from the injector
         mongo_client = injector.get(MongoClient)
-        checkpointer = MongoDBSaver(mongo_client, db_name=config_reader.get('MongoDB', 'db_name'))
+        checkpointer = MongoDBSaver(
+            mongo_client, db_name=config_reader.get("MongoDB", "db_name")
+        )
 
         # Get the KaggleProblemSolver instance from the injector
         solver = injector.get(KaggleProblemSolver)
@@ -37,6 +40,7 @@ def main():
         solver.invoke(args.url, debug=True)
 
     # The SandboxManager context is automatically closed here
+
 
 if __name__ == "__main__":
     main()
