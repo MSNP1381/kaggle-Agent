@@ -13,6 +13,8 @@ class SandboxManager:
             self.sandbox = CodeInterpreter.reconnect(l[0].sandbox_id)
         else:
             self.sandbox=CodeInterpreter()
+            self.sandbox.keep_alive(3600)
+            
         return self.sandbox.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -28,6 +30,7 @@ class E2B_executor(NotebookExecutorInterface):
     def reset(self):
         self.is_restarted=True
         self.executor.notebook.restart_kernel()
+        
 
     def test_and_execute(self,code)->List[CellResult]:
         executiuon_result=self.executor.notebook.exec_cell(code)

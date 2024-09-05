@@ -1,6 +1,6 @@
 # main.py
 import argparse
-import config_reader
+from config_reader import config_reader
 from di_container import create_injector, SandboxManager
 from agent import KaggleProblemSolver
 from persistence.mongo import MongoDBSaver
