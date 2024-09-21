@@ -5,25 +5,24 @@ from pymongo import MongoClient
 from langchain_openai import ChatOpenAI
 from code_generation_agent import CodeGenerationAgent
 from kaggle_scaper import ScrapeKaggle
-from nbexecuter_e2b import E2B_executor, SandboxManager
+
+# from nbexecuter_e2b import E2B_executor, SandboxManager
+from executors.nbexecutor_jupyter import JupyterExecutor
 from planner_agent import KaggleProblemPlanner
 from replanner import KaggleProblemRePlanner
 from task_enhancer import KaggleTaskEnhancer
 from dataUtils_agent import KaggleDataUtils
 import os
 from config_reader import config_reader
-from e2b_code_interpreter import CodeInterpreter
+from langfuse.callback import CallbackHandler
 import time
 
 
 class AppModule(Module):
 
     def __init__(self):
-        self.sandbox_manager = SandboxManager()
-        self.server = None
 
-    def configure(self, binder):
-        binder.bind(SandboxManager, to=self.sandbox_manager)
+        self.server = None
 
     @singleton
     @provider
@@ -33,6 +32,11 @@ class AppModule(Module):
             "recursion_limit": config_reader.getint(
                 "General", "recursion_limit", fallback=50
             ),
+            "callbacks": [CallbackHandler(
+            public_key=os.getenv["LANGFUSE_PUBLIC_KEY"],
+            secret_key=os.getenv["LANGFUSE_SECRET_KEY"],
+            host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+        )]
         }
 
     @singleton
@@ -49,15 +53,10 @@ class AppModule(Module):
 
     @singleton
     @provider
-    def provide_server(self) -> CodeInterpreter:
-        if self.server is None:
-            self.server = self.sandbox_manager.__enter__()
-        return self.server
-
-    @singleton
-    @provider
-    def provide_nb_executor(self, server: CodeInterpreter) -> E2B_executor:
-        return E2B_executor(server)
+    def provide_nb_executor(self) -> JupyterExecutor:
+        server_url = config_reader.get("Jupyter", "server_url")
+        token = config_reader.get("Jupyter", "token")
+        return JupyterExecutor(server_url, token)
 
     @singleton
     @provider
@@ -105,9 +104,10 @@ class AppModule(Module):
     @singleton
     @provider
     def provide_code_agent(
-        self, config: dict, proxy: httpx.Client, nb_executor: E2B_executor
+        self, config: dict, proxy: httpx.Client, nb_executor: JupyterExecutor
     ) -> CodeGenerationAgent:
         return CodeGenerationAgent(config, proxy=proxy, nb_executor=nb_executor)
+
 
 
 def create_injector():

@@ -4,15 +4,12 @@ import operator
 import pprint
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph, START
-from typing import Annotated, List, TypedDict, Set, Dict
+from typing import Annotated, List, TypedDict
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.output_parsers import StrOutputParser
-from langchain.output_parsers import OutputFixingParser
 from langchain.pydantic_v1 import BaseModel, Field
-from nbclient.exceptions import CellExecutionError
 from states.code import Code
 from states.main import KaggleProblemState
-from nbexecutor import NBExecutor
 from prompts.code_generation_prompt import (
     IMPROVED_CODE_GEN_PROMPT,
     VARIABLE_CORRECTION_PROMPT,
@@ -28,9 +25,6 @@ def remove_color(text):
         r"\x1B\[[0-?]*[ -/]*[@-~]"
     )  # I looked it up and the library uses ANSI codes internally so I believe this is the right re.compile
     return ansi_escape.sub("", text)
-
-
-from typing import Dict
 
 
 class GeneratedCode(BaseModel):
@@ -203,7 +197,7 @@ Your latest solution to code failed the code execution test:
 explain what error it is and how to solve it
 **error_message:**
 ```
-   Error name {remove_color(cc(e.traceback))}
+   Error name {remove_color(cc(str(e.traceback)))}
 - 
 ```
 """,

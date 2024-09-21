@@ -1,7 +1,7 @@
 # main.py
 import argparse
 from config_reader import config_reader
-from di_container import create_injector, SandboxManager
+from di_container import create_injector
 from agent import KaggleProblemSolver
 from persistence.mongo import MongoDBSaver
 from dotenv import load_dotenv
@@ -25,19 +25,19 @@ def main():
     injector, app_module = create_injector()
 
     # Use the SandboxManager as a context manager
-    with app_module.sandbox_manager as server:
-        # Get the MongoDB client from the injector
-        mongo_client = injector.get(MongoClient)
-        checkpointer = MongoDBSaver(
-            mongo_client, db_name=config_reader.get("MongoDB", "db_name")
-        )
 
-        # Get the KaggleProblemSolver instance from the injector
-        solver = injector.get(KaggleProblemSolver)
+    # Get the MongoDB client from the injector
+    mongo_client = injector.get(MongoClient)
+    checkpointer = MongoDBSaver(
+        mongo_client, db_name=config_reader.get("MongoDB", "db_name")
+    )
 
-        # Compile and invoke the solver
-        graph = solver.compile(checkpointer)
-        solver.invoke(args.url, debug=True)
+    # Get the KaggleProblemSolver instance from the injector
+    solver = injector.get(KaggleProblemSolver)
+
+    # Compile and invoke the solver
+    graph = solver.compile(checkpointer)
+    solver.invoke(args.url, debug=True)
 
     # The SandboxManager context is automatically closed here
 

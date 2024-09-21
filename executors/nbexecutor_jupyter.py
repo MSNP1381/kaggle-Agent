@@ -25,7 +25,8 @@ class JupyterExecutor(NotebookExecutorInterface):
 
     def reset(self):
         # Restart the kernel
-        self.kc.restart_kernel()
+        self.km.restart_kernel()
+
         self.is_restarted = True
 
     def test_and_execute(self, code: str) -> List[CellResult]:
@@ -64,7 +65,7 @@ class JupyterExecutor(NotebookExecutorInterface):
         # Assuming we save the file and set the environment variable manually
         file_path = "/tmp/" + file.name
         with open(file_path, "wb") as f:
-            f.write(file.read())
+            f.write(bytes(file.read(), "utf8"))
 
         # Setting the environment variable
         # Assuming the kernel can access this file path (adjust depending on your environment)

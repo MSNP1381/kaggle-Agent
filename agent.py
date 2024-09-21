@@ -7,12 +7,13 @@ from langgraph.graph import StateGraph, START, END
 from pymongo import MongoClient
 from code_generation_agent import CodeGenerationAgent
 from kaggle_scaper import ScrapeKaggle
-from executors.nbexecuter_e2b import E2B_executor, SandboxManager
+from executors.nbexecutor_jupyter import JupyterExecutor
 from persistence.mongo import MongoDBSaver
 from planner_agent import KaggleProblemPlanner
 from replanner import KaggleProblemRePlanner
 from dotenv import load_dotenv
 import os
+from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
 from dataUtils_agent import KaggleDataUtils
@@ -25,19 +26,18 @@ class KaggleProblemSolver:
         config: dict,
         proxy: httpx.Client,
         client: MongoClient,
-        server: SandboxManager,
-        nb_executor: E2B_executor,
+        nb_executor: JupyterExecutor,
         scraper: ScrapeKaggle,
         planner: KaggleProblemPlanner,
         re_planner: KaggleProblemRePlanner,
         enhancer: KaggleTaskEnhancer,
         data_utils: KaggleDataUtils,
         code_agent: CodeGenerationAgent,
+        handler: CallbackHandler
     ):
         self.config = config
         self.proxy = proxy
         self.client = client
-        self.server = server
         self.nb_executor = nb_executor
         self.scraper = scraper
         self.planner = planner
@@ -45,14 +45,13 @@ class KaggleProblemSolver:
         self.enhancer = enhancer
         self.data_utils = data_utils
         self.code_agent = code_agent
+        self.handler = handler
 
     def _init_state(self, url: str):
         self.dataset_path = "./train.csv"
         # self.nb_executor.create_nb()
         f = open(self.dataset_path)
         env_var = self.nb_executor.upload_file_env(f)
-        print(*self.nb_executor.executor.filesystem.list("/home/user"), sep="\n")
-        print(*self.nb_executor.executor.env_vars.items(), sep="\n")
 
         f.close()
         return KaggleProblemState(
@@ -113,53 +112,52 @@ class KaggleProblemSolver:
     def invoke(self, url: str, debug=False):
         state = self._init_state(url)
 
-        return graph.invoke(state, config=self.config, debug=debug)
+        return self.graph.invoke(state, config=self.config, debug=debug)
 
 
 # Example usage
 if __name__ == "__main__":
     print(".env loaded:", load_dotenv())
-    with SandboxManager() as server:
 
-        parser = argparse.ArgumentParser("kaggle_scraper")
-        parser.add_argument(
-            "--url",
-            help="url to challenge",
-            type=str,
-            required=False,
-            default="https://www.kaggle.com/competitions/nlp-getting-started/",
-        )
-        parser.add_argument(
-            "--cached",
-            help="use cached version",
-            type=bool,
-            required=False,
-        )
-        args = parser.parse_args()
-        proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
+    parser = argparse.ArgumentParser("kaggle_scraper")
+    parser.add_argument(
+        "--url",
+        help="url to challenge",
+        type=str,
+        required=False,
+        default="https://www.kaggle.com/competitions/nlp-getting-started/",
+    )
+    parser.add_argument(
+        "--cached",
+        help="use cached version",
+        type=bool,
+        required=False,
+    )
+    args = parser.parse_args()
+    proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
 
-        # langfuse_handler = CallbackHandler(
-        #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-        #     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-        #     host=os.getenv("LANGFUSE_HOST"),
-        #     session_id=f"session-{int(time.time())}",
+    # langfuse_handler = CallbackHandler(
+    #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    #     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    #     host=os.getenv("LANGFUSE_HOST"),
+    #     session_id=f"session-{int(time.time())}",
 
-        # )
+    # )
 
-        client = MongoClient(
-            host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
-        )
-        checkpointer = MongoDBSaver(client, db_name="checkpoints")
+    client = MongoClient(
+        host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
+    )
+    checkpointer = MongoDBSaver(client, db_name="checkpoints")
 
-        config = {
-            "configurable": {"thread_id": str(int(time.time()))},
-            # "callbacks": [
-            #     langfuse_handler,  # handler_1,handler_2
-            # ],
-            "recursion_limit": 50,
-            "checkpointer": checkpointer,
-        }
-        solver = KaggleProblemSolver(config, proxy, client, server, args)
-        graph = solver.compile(checkpointer)
-        # exit()
-        solver.invoke(True)
+    config = {
+        "configurable": {"thread_id": str(int(time.time()))},
+        # "callbacks": [
+        #     langfuse_handler,  # handler_1,handler_2
+        # ],
+        "recursion_limit": 50,
+        "checkpointer": checkpointer,
+    }
+    solver = KaggleProblemSolver(config, proxy, client, server, args)
+    graph = solver.compile(checkpointer)
+    # exit()
+    solver.invoke(True)
