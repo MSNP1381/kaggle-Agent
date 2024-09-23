@@ -2,7 +2,7 @@ import httpx
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from pydantic import BaseModel, Field
+from  pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 from states.main import KaggleProblemState

@@ -6,7 +6,7 @@ import httpx
 import pandas as pd
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from langchain.output_parsers import PydanticOutputParser
 from prompts.utils import DATASET_ANALYSIS_PROMPT
 from states.main import KaggleProblemState
@@ -136,7 +136,7 @@ class KaggleDataUtils:
         # """
 
         result.dataset_overview += f" dataset path is : {state.dataset_path}"
-        return {"dataset_info": result.json().replace("\\n", "\n")}
+        return {"dataset_info": result.model_dump_json().replace("\\n", "\n")}
 
 
 if __name__ == "__main__":

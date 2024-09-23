@@ -1,5 +1,5 @@
 from typing import List
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 import yaml
 
 """
@@ -30,7 +30,7 @@ class EnhancedTask(BaseModel):
     )
 
     def __repr__(self) -> str:
-        return self.json(indent=1)
+        return self.model_dump_json(indent=1)
 
     def __str__(self):
         return f"""

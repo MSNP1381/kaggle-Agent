@@ -12,20 +12,20 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-# from webdriver_manager.chrome import ChromeDriverManager
 from markdownify import markdownify
 from dotenv import load_dotenv
 
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 
 from prompts.summarizer_prompt import (
     CHALLENGE_DATA_PROMPT,
-    CHALLENGE_DESCRIPTOIN_PROMPT,
+    CHALLENGE_DESCRIPTION_PROMPT,
     CHALLENGE_EVALUATION_PROMPT,
 )
 from states.main import KaggleProblemState
+from webdriver_manager.chrome import ChromeDriverManager
 
 """
 TODO: [ ] get description about target and how to achieve results
@@ -34,8 +34,14 @@ TODO: [ ] get description about target and how to achieve results
 """
 
 
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+
+
 class Evaluation(BaseModel):
-    description: str = Field(description="usefull description for evaluating data")
+    description: str = Field(description="useful description for evaluating data")
     metric: str = Field(
         description="metric for evaluating challenge like f1 score,accuracy,precision, etc. which is mentioned in text"
     )
@@ -70,14 +76,12 @@ class ScrapeKaggle:
             temperature=0,
         )
 
-    def extract_challenge_details(self, challenge_url: str):
+    def extract_challenge_details(self, challenge_url):
         """
-        Extracts detailed information about a Kaggle challenge from its URL.
+        Extracts challenge details from the given URL.
 
         Args:
-            challenge_url (str): URL of the Kaggle challenge.
-            proxy_host (str, optional): Proxy server host.
-            proxy_port (int, optional): Proxy server port.
+            challenge_url (str): The URL of the challenge.
 
         Returns:
             dict: A dictionary containing the challenge details.
@@ -86,16 +90,29 @@ class ScrapeKaggle:
         if not challenge_url.endswith("/"):
             challenge_url += "/"
         # if os.getenv("HTTP_PROXY_URL", None):
-        chrome_options.add_argument(f"--proxy-server=http://127.0.0.1:2080")
-        chrome_options.add_argument("--blink-settings=imagesEnabled=false")
-        # chrome_options.add_argument("--headless=new")
+        # # chrome_options.add_argument(f"--proxy-server=http://127.0.0.1:2080")
+        # chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+        # chrome_options.add_argument("--disable-gpu")
+        # chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--headless=new")
         driver = webdriver.Chrome(
-            # service=
-            options=chrome_options
-            # service=Service("/home/msnp/chromedriver_linux64/")
-            # )
+            options=chrome_options,
+            
+            service=Service('/home/codespace/.wdm/drivers/chromedriver/linux64/129.0.6668.58/chromedriver-linux64/chromedriver')
         )
 
+        # Your code to use the driver goes here
+
+        # Don't forget to quit the driver after use
+        driver.quit()
+
+        # Example usage
+        # extract_challenge_details("https://example.com/challenge")
+        print("ChromeDriver not found, installing headless ChromeDriver...")
+        chrome_version = "129.0.6668.58"  # specify the correct version of ChromeDriver
+        driver = webdriver.Chrome(
+            service=Service(ChromeDriverManager(chrome_version).install()), options=chrome_options
+        )
         driver.get(challenge_url + "overview/")
 
         # Wait for the challenge details to load
@@ -142,12 +159,12 @@ class ScrapeKaggle:
         result = self.scraped_data_collection.find_one({"challenge_url": challenge_url})
         return result
 
-    def summarize_data(self, description, evaluation, data_details):
+    def ummarize_data(self, description, evaluation, data_details):
         eval_parser = PydanticOutputParser(pydantic_object=Evaluation)
         data_parser = PydanticOutputParser(pydantic_object=Evaluation)
 
         desc_inp = ChatPromptTemplate.from_messages(
-            CHALLENGE_DESCRIPTOIN_PROMPT
+            CHALLENGE_DESCRIPTION_PROMPT
         ).format(text=description)
         eval_inp = ChatPromptTemplate.from_messages(CHALLENGE_EVALUATION_PROMPT).format(
             text=evaluation, format_instructions=eval_parser.get_format_instructions()
@@ -186,11 +203,13 @@ class ScrapeKaggle:
             "index": -1,
             "problem_description": data["description"],
             "dataset_info": data["data_details"],
-            "evaluation_metric": data["evaluation"]["metric"],
+            # "evaluation_metric": data["evaluation"]['metric'],
+            "evaluation_metric": data["evaluation"]['metric']
         }
 
 
 if __name__ == "__main__":
+    
     load_dotenv(override=True)
     client = MongoClient(
         host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))

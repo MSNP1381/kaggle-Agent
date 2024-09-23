@@ -1,4 +1,4 @@
-CHALLENGE_DESCRIPTOIN_PROMPT = [
+CHALLENGE_DESCRIPTION_PROMPT = [
     (
         "system",
         "You are a helpful AI assistant. Your job is to summarize the challenge description of a Kaggle-ML competition. Provide a clear and concise summary of the challenge, including its objectives and any important details. Explain your reasoning step-by-step.",
@@ -26,6 +26,6 @@ CHALLENGE_DATA_PROMPT = [
     ),
     (
         "user",
-        "use this formatting instruction: {format_instructions}\nchallenge data decription is :\n\n ```markdown\n{text}\n```",
+        "\nchallenge data decription is :\n\n ```markdown\n{text}\n```",
     ),
 ]

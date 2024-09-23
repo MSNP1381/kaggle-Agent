@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from operator import add
 from typing_extensions import Annotated
 
@@ -61,7 +61,7 @@ Executed Task No.{index_+1}
         return "\n-" + "".join([f"- {i}\n" for i in tasks])
 
     def __str__(self) -> str:
-        return self.json()
+        return self.model_dump_json()
 
     def __repr__(self) -> str:
-        return self.json(indent=1)
+        return self.model_dump_json(indent=1)

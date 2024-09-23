@@ -1,0 +1,28 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${NB_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${TOKEN}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env_docker
+    environment:
+      - TOKEN=de6838252f95d3b9e803b28df33b4baa
+    depends_on:
+      - mongodb
+    ports:
+      - "8888:8888"
+
+volumes:
+  mongo-data:
+

@@ -33,7 +33,7 @@ class KaggleProblemSolver:
         enhancer: KaggleTaskEnhancer,
         data_utils: KaggleDataUtils,
         code_agent: CodeGenerationAgent,
-        handler: CallbackHandler
+        handler: CallbackHandler,
     ):
         self.config = config
         self.proxy = proxy
@@ -134,7 +134,8 @@ if __name__ == "__main__":
         required=False,
     )
     args = parser.parse_args()
-    proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
+    # proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
+    proxy = None
 
     # langfuse_handler = CallbackHandler(
     #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),

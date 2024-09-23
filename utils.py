@@ -86,7 +86,7 @@ def cc(s: str):
 def exec2s(data: Union[CellResult, List[CellResult]]) -> str:
     out_s = ""
     if isinstance(data, List):
-        out_s = "\n-----------------\n".join(str(data))
+        out_s = "\n---\n".join(map(str,data))
     else:
         out_s = str(data)
     return out_s

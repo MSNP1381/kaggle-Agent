@@ -7,7 +7,7 @@ from langgraph.graph import END, StateGraph, START
 from typing import Annotated, List, TypedDict
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.output_parsers import StrOutputParser
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 from states.code import Code
 from states.main import KaggleProblemState
 from prompts.code_generation_prompt import (
@@ -89,7 +89,7 @@ class CodeGenerationAgent:
         print("---GENERATING CODE SOLUTION---")
         kaggle_state = state["kaggle_state"]
         iterations = state["iterations"]
-        error = state["error"]
+        # error = state["error"]
         messages = state["messages"]
 
         code_solution: GeneratedCode = self.code_gen_chain.invoke(
@@ -205,7 +205,7 @@ explain what error it is and how to solve it
             ]
             llm = ChatOpenAI(
                 base_url=self.base_url,
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 http_client=self.proxy,
                 temperature=0,
             )

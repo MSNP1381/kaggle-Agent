@@ -14,7 +14,8 @@ from task_enhancer import KaggleTaskEnhancer
 from dataUtils_agent import KaggleDataUtils
 import os
 from config_reader import config_reader
-from langfuse.callback import CallbackHandler
+
+# from langfuse.callback import CallbackHandler
 import time
 
 
@@ -32,17 +33,19 @@ class AppModule(Module):
             "recursion_limit": config_reader.getint(
                 "General", "recursion_limit", fallback=50
             ),
-            "callbacks": [CallbackHandler(
-            public_key=os.getenv["LANGFUSE_PUBLIC_KEY"],
-            secret_key=os.getenv["LANGFUSE_SECRET_KEY"],
-            host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-        )]
+            "callbacks": [
+                # CallbackHandler(
+                # public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
+                # secret_key=os.environ["LANGFUSE_SECRET_KEY"],
+                # host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),)
+            ],
         }
 
     @singleton
     @provider
     def provide_proxy(self) -> httpx.Client:
-        return httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
+        # return httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
+        return None
 
     @singleton
     @provider
@@ -107,7 +110,6 @@ class AppModule(Module):
         self, config: dict, proxy: httpx.Client, nb_executor: JupyterExecutor
     ) -> CodeGenerationAgent:
         return CodeGenerationAgent(config, proxy=proxy, nb_executor=nb_executor)
-
 
 
 def create_injector():
