@@ -21,7 +21,7 @@ services:
     depends_on:
       - mongodb
     ports:
-      - "8888:8888"
+      - "8787:8787"
 
 volumes:
   mongo-data:

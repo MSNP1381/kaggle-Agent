@@ -16,8 +16,20 @@ from prompts.code_generation_prompt import (
 )
 
 import re
+import logging
 
 from utils import CellError, NotebookExecutorInterface, cc, exec2s
+
+# Initialize logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("code_generation_agent.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 def remove_color(text):
@@ -43,6 +55,9 @@ class GeneratedCode(BaseModel):
         default="",  # Optional field with default empty string
     )
 
+    def __str__(self) -> str:
+        return self.imports + "\n" + self.code
+
 
 class CodeGraphState(TypedDict):
     error: str
@@ -51,6 +66,7 @@ class CodeGraphState(TypedDict):
     iterations: int
     kaggle_state: KaggleProblemState
     ast_variables: set[str]
+    result: str
     messages: Annotated[List, operator.add]
 
 
@@ -86,30 +102,31 @@ class CodeGenerationAgent:
         self.workflow = self.create_workflow()
 
     def generate(self, state: CodeGraphState):
-        print("---GENERATING CODE SOLUTION---")
+        logger.info("---GENERATING CODE SOLUTION---")
         kaggle_state = state["kaggle_state"]
         iterations = state["iterations"]
         # error = state["error"]
         messages = state["messages"]
 
-        code_solution: GeneratedCode = self.code_gen_chain.invoke(
-            {
-                "problem_description": kaggle_state.problem_description,
-                "model_info": kaggle_state.model_info,
-                "planned_tasks": kaggle_state.planned_tasks,
-                "evaluation_metric": kaggle_state.evaluation_metric,
-                "format_instructions": self.format_instructions,
-                "messages": messages,
-                "current_task": str(kaggle_state.enhanced_tasks[kaggle_state.index]),
-                "format_instructions": self.format_instructions,
-                "previous_tasks": kaggle_state.get_task_results(),
-            },
-            config=self.config,
-        )
-        m = [
-            (
-                "ai",
-                f"""
+        try:
+            code_solution: GeneratedCode = self.code_gen_chain.invoke(
+                {
+                    "problem_description": kaggle_state.problem_description,
+                    "modelInfo": kaggle_state.modelInfo,
+                    "planned_tasks": kaggle_state.planned_tasks,
+                    "evaluation_metric": kaggle_state.evaluation_metric,
+                    "format_instructions": self.format_instructions,
+                    "messages": messages,
+                    "current_task": str(kaggle_state.enhanced_tasks[kaggle_state.index]),
+                    "format_instructions": self.format_instructions,
+                    "previous_tasks": kaggle_state.get_task_results(),
+                },
+                config=self.config,
+            )
+            m = [
+                (
+                    "ai",
+                    f"""
 codes description:
 {code_solution.description}
 
@@ -118,19 +135,27 @@ code is :
 
 {code_solution.code}
 
+"""
+                )
+            ]
 
-""",
-            )
-        ]
-
-        # Check and correct variables
-
-        return {
-            "generation": code_solution,
-            "iterations": iterations,
-            "error": "no",
-            "messages": m,
-        }
+            logger.info("Code generation successful.")
+            return {
+                "generation": code_solution,
+                "iterations": iterations,
+                "error": "no",
+                "messages": m,
+            }
+        except Exception as e:
+            logger.error(f"Error during code generation: {e}", exc_info=True)
+            return {
+                "generation": GeneratedCode(imports="", code="", description=""),
+                "iterations": iterations,
+                "error": "yes",
+                "erro_msg": str(e),
+                "iteration": iterations + 1,
+                "messages": messages,
+            }
 
     def check_and_correct_variables(self, state: CodeGraphState):
         code_solution = state["generation"]
@@ -192,7 +217,7 @@ code is :
             m = [
                 (
                     "user",
-                    f"""\
+                    f"""
 Your latest solution to code failed the code execution test: 
 explain what error it is and how to solve it
 **error_message:**
@@ -213,7 +238,7 @@ explain what error it is and how to solve it
             res = (self.code_gen_prompt | llm | StrOutputParser()).invoke(
                 {
                     "problem_description": kaggle_state.problem_description,
-                    "model_info": kaggle_state.model_info,
+                    "modelInfo": kaggle_state.modelInfo,
                     "planned_tasks": kaggle_state.planned_tasks,
                     "evaluation_metric": kaggle_state.evaluation_metric,
                     "format_instructions": self.format_instructions,
@@ -274,7 +299,7 @@ explain what error it is and how to solve it
             {"end": END, "generate": "generate", "reset_procedure": "reset_procedure"},
         )
 
-        return workflow.compile(debug=True)
+        return workflow.compile()
 
     def reflect(self, state: CodeGraphState):
         """
@@ -287,7 +312,7 @@ explain what error it is and how to solve it
             state (dict): New key added to state, generation
         """
 
-        print("---GENERATING CODE SOLUTION---")
+        logger.info("---REFLECTING ON ERRORS---")
 
         # State
         messages = state["messages"]
@@ -299,24 +324,29 @@ explain what error it is and how to solve it
         # Add reflection
         kaggle_state = state["kaggle_state"]
 
-        reflections = self.code_gen_chain.invoke(
-            {
-                "problem_description": kaggle_state.problem_description,
-                "model_info": kaggle_state.model_info,
-                "planned_tasks": kaggle_state.planned_tasks,
-                "evaluation_metric": kaggle_state.evaluation_metric,
-                "messages": state["messages"],
-                "current_task": str(kaggle_state.enhanced_tasks[kaggle_state.index]),
-                "format_instructions": self.format_instructions,
-                "previous_tasks": kaggle_state.get_task_results(),
-            },
-        )
-        messages += [("assistant", f"Here are reflections on the error: {reflections}")]
-        return {
-            "generation": code_solution,
-            "messages": messages,
-            "iterations": iterations,
-        }
+        try:
+            reflections = self.code_gen_chain.invoke(
+                {
+                    "problem_description": kaggle_state.problem_description,
+                    "modelInfo": kaggle_state.modelInfo,
+                    "planned_tasks": kaggle_state.planned_tasks,
+                    "evaluation_metric": kaggle_state.evaluation_metric,
+                    "messages": state["messages"],
+                    "current_task": str(kaggle_state.enhanced_tasks[kaggle_state.index]),
+                    "format_instructions": self.format_instructions,
+                    "previous_tasks": kaggle_state.get_task_results(),
+                },
+            )
+            messages += [("assistant", f"Here are reflections on the error: {reflections}")]
+            logger.info("Reflection on errors completed successfully.")
+            return {
+                "generation": code_solution,
+                "messages": messages,
+                "iterations": iterations,
+            }
+        except Exception as e:
+            logger.error(f"Error during reflection: {e}", exc_info=True)
+            return state  # Return current state if reflection fails
 
     def __reset_procedure(self, state: CodeGraphState):
         kaggle_state = state["kaggle_state"]
@@ -345,6 +375,8 @@ explain what error it is and how to solve it
         task_codes = state.task_codes_results
 
         result = self.workflow.invoke(initial_state, config=self.config)
+
+        # print( str(result.get("result", "nothing")))
         task_codes.append(
             (
                 state.enhanced_tasks[state.index],
@@ -353,7 +385,7 @@ explain what error it is and how to solve it
                     code=result["generation"].code,
                     description=result["generation"].description,
                 ),
-                result.get("result", ""),
+                str(result.get("result", "")),
             )
         )
         return {

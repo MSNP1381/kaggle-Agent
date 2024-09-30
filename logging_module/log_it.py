@@ -34,7 +34,7 @@ def log_it(
         case "code_agent":
             data_result["context"] = {
                 "problem_description": state.problem_description,
-                "model_info": state.model_info,
+                "modelInfo": state.modelInfo,
                 "planned_tasks": state.planned_tasks,
                 "previous_tasks": state.get_task_results(),
                 "current_task": state.enhanced_tasks[state.index],

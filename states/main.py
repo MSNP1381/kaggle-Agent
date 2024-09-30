@@ -11,11 +11,11 @@ from utils import dict_concat
 class KaggleProblemState(BaseModel):
     index: int = Field(default=-1)
     problem_description: str = Field(default="")
-    dataset_path: str = Field(default="")
+    dataset_path: str = Field(default="./train.py")
     challenge_url: str = Field(default="")
     dataset_info: Optional[str] = Field(default="")
     current_task: Optional[str] = Field(default="")
-    model_info: Dict[str, Any] = Field(default=None)
+    modelInfo: Dict[str, Any] = Field(default=None)
     task_codes_results: List[Tuple[EnhancedTask, Code, str]] = Field(default=[])
     planned_tasks: List[str] = Field(default=None)
     evaluation_metric: Optional[str] = Field(default=None)

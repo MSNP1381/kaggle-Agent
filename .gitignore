@@ -169,3 +169,7 @@ x.png
 .conda/
 ./*.tmp
 x.ipynb
+notebooks/*
+kaggle_challenges_data/*
+ongoing/*
+*.log

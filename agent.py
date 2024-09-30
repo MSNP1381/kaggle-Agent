@@ -6,7 +6,7 @@ from injector import inject
 from langgraph.graph import StateGraph, START, END
 from pymongo import MongoClient
 from code_generation_agent import CodeGenerationAgent
-from kaggle_scaper import ScrapeKaggle
+from kaggle_scraper import ScrapeKaggle
 from executors.nbexecutor_jupyter import JupyterExecutor
 from persistence.mongo import MongoDBSaver
 from planner_agent import KaggleProblemPlanner
@@ -16,8 +16,10 @@ import os
 from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
-from dataUtils_agent import KaggleDataUtils
-
+from data_utils import DataUtils
+import kaggle
+from submission.submission import SubmissionNode  # Import the new SubmissionNode
+from di_container import create_injector
 
 class KaggleProblemSolver:
     @inject
@@ -31,9 +33,10 @@ class KaggleProblemSolver:
         planner: KaggleProblemPlanner,
         re_planner: KaggleProblemRePlanner,
         enhancer: KaggleTaskEnhancer,
-        data_utils: KaggleDataUtils,
+        data_utils: DataUtils,
         code_agent: CodeGenerationAgent,
         handler: CallbackHandler,
+        submission_node: SubmissionNode,  # Inject the SubmissionNode
     ):
         self.config = config
         self.proxy = proxy
@@ -46,14 +49,16 @@ class KaggleProblemSolver:
         self.data_utils = data_utils
         self.code_agent = code_agent
         self.handler = handler
+        self.submission_node = submission_node
 
     def _init_state(self, url: str):
-        self.dataset_path = "./train.csv"
-        # self.nb_executor.create_nb()
-        f = open(self.dataset_path)
-        env_var = self.nb_executor.upload_file_env(f)
+        self.dataset_path = "./ongoing/train.csv"
+        self.test_dataset_path = "./ongoing/test.csv"
+        with open(self.dataset_path) as f:
+            env_var = self.nb_executor.upload_file_env(f)
+        with open(self.test_dataset_path) as f:
+            env_var = self.nb_executor.upload_file_env(f, env_var="TEST_FILE")
 
-        f.close()
         return KaggleProblemState(
             **{
                 "file_env_var": env_var,
@@ -79,7 +84,8 @@ class KaggleProblemSolver:
             "\n\n**************************",
         )
         if state.index == len(state.planned_tasks) - 1:
-            return END
+            # return END
+            return "submission_node"
         return "enhancer"
 
     def compile(self, checkpointer):
@@ -91,6 +97,7 @@ class KaggleProblemSolver:
         # graph_builder.add_node("executor", self.executor)
         graph_builder.add_node("enhancer", self.enhancer)
         graph_builder.add_node("data_utils", self.data_utils)
+        graph_builder.add_node("submission_node", self.submission_node)  # Add the SubmissionNode
 
         graph_builder.add_edge(START, "scraper")
         graph_builder.add_edge("scraper", "data_utils")
@@ -99,14 +106,16 @@ class KaggleProblemSolver:
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
 
         graph_builder.add_edge("enhancer", "code_agent")
-        # graph_builder.add_edge("code_agent", "executor")
+        graph_builder.add_edge("code_agent", "submission_node")  # Connect code_agent to submission_node
+        # graph_builder.add_edge("submission_node", "executor")
         graph_builder.add_conditional_edges(
-            "code_agent", self.is_plan_done, path_map={END: END, "enhancer": "enhancer"}
+            "submission_node", self.is_plan_done, path_map={"submission_node": 'submission_node', "enhancer": "enhancer"}
         )
+        graph_builder.add_edge("submission_node", END)
 
         # memory = SqliteSaver.from_conn_string(":memory:")
 
-        self.graph = graph_builder.compile(checkpointer=checkpointer, debug=True)
+        self.graph = graph_builder.compile(checkpointer=checkpointer)
         return self.graph
 
     def invoke(self, url: str, debug=False):
@@ -114,6 +123,25 @@ class KaggleProblemSolver:
 
         return self.graph.invoke(state, config=self.config, debug=debug)
 
+    def submit_to_kaggle(self, competition: str, submission_file: str, message: str):
+        """
+        Submits the specified file to the given Kaggle competition and retrieves the result.
+
+        :param competition: The name of the Kaggle competition.
+        :param submission_file: The path to the submission file.
+        :param message: The submission message.
+        :return: The result of the submission.
+        """
+        # Submit the file to the competition
+        print(f"Submitting {submission_file} to {competition} with message: {message}")
+        kaggle.api.competition_submit(submission_file, message, competition)
+
+        # Retrieve the submission result
+        submissions = kaggle.api.competition_submissions(competition)
+        latest_submission = max(submissions, key=lambda x: x['date'])
+        print(f"Latest submission result: {latest_submission}")
+
+        return latest_submission
 
 # Example usage
 if __name__ == "__main__":
@@ -136,14 +164,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
     proxy = None
-
-    # langfuse_handler = CallbackHandler(
-    #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-    #     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-    #     host=os.getenv("LANGFUSE_HOST"),
-    #     session_id=f"session-{int(time.time())}",
-
-    # )
+    session_id = f"session-{int(time.time())}"
+    langfuse_handler = CallbackHandler(
+        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+        secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+        host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+        session_id=session_id,
+    )
 
     client = MongoClient(
         host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
@@ -151,14 +178,26 @@ if __name__ == "__main__":
     checkpointer = MongoDBSaver(client, db_name="checkpoints")
 
     config = {
-        "configurable": {"thread_id": str(int(time.time()))},
+        "configurable": {"thread_id": session_id},
         # "callbacks": [
         #     langfuse_handler,  # handler_1,handler_2
         # ],
         "recursion_limit": 50,
         "checkpointer": checkpointer,
     }
-    solver = KaggleProblemSolver(config, proxy, client, server, args)
+    injector, app_module = create_injector()
+    solver = injector.get(KaggleProblemSolver)
     graph = solver.compile(checkpointer)
-    # exit()
-    solver.invoke(True)
+    result = solver.invoke(args.url, debug=args.cached)
+
+    # Configuration for submission
+    submission_config = {
+        "competition": "nlp-getting-started",
+        "submission_file": "path/to/your/submission.csv",
+        "submission_message": "My first submission",
+    }
+
+    # Invoke the submission node
+    state = result  # Assuming `invoke` returns the current state
+    submission_result = solver.submission_node.run(state, submission_config)
+    print(submission_result)

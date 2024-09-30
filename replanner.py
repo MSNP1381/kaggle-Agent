@@ -2,7 +2,7 @@ import httpx
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
-from  pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 from states.main import KaggleProblemState
@@ -35,34 +35,46 @@ class KaggleProblemRePlanner:
             [
                 (
                     "system",
-                    """You are an AI assistant tasked with re planning a Kaggle machine learning project based on 
-            the latest execution results. Given the current state of the project and the output of the last executed 
-            task, determine if the plan needs to be adjusted.
+                    """You are an AI assistant specialized in re-planning machine learning projects for Kaggle competitions. Your objective is to ensure that the project plan remains effective and aligned with the competition goals based on the latest execution results.
 
-            Analyze the execution result carefully and determine if it requires changes to the plan.
-            If changes are needed, provide a new list of planned tasks.
-            If no changes are needed, keep the current plan.
+**Objectives:**
+1. **Alignment:** Ensure the current plan aligns with the overall problem objectives.
+2. **Efficiency:** Identify and address any inefficiencies or bottlenecks in the current workflow.
+3. **Adaptability:** Incorporate new insights or resolve issues highlighted by recent task executions.
 
-            {format_instructions}
+**Process:**
+- **Analyze** the problem description and current project state.
+- **Review** the last executed task and its outcomes.
+- **Assess** the effectiveness of the existing plan.
+- **Decide** whether adjustments are necessary.
+- **Propose** a revised set of tasks if modifications are needed.
 
-            Ensure your response includes a clear decision on whether changes are needed, the reasoning behind your 
-            decision, and a new plan if applicable.""",
+{format_instructions}
+
+**Your response should include:**
+1. **Decision:** Whether the plan needs to be changed.
+2. **Reasoning:** Explanation for your decision.
+3. **New Plan:** A list of revised tasks (if adjustments are required)."""
                 ),
                 (
                     "human",
-                    """Problem Description:
-            {problem_description}
+                    """**Problem Description:**
+{problem_description}
 
-            Current State:
-            {state}
+**Current State:**
+{state}
 
-            Last executed task: {last_task}
-            Execution result: {execution_result}
+**Last Executed Task:**
+{last_task}
 
-            Current plan:
-            {current_plan}
+**Execution Result:**
+{execution_result}
 
-            Based on this information, should the plan be changed? If so, what should the new plan be?""",
+**Current Plan:**
+{current_plan}
+
+**Question:**
+Based on the above information, should the project plan be adjusted? If so, please provide a revised list of tasks."""
                 ),
             ]
         )
@@ -112,7 +124,7 @@ class KaggleProblemRePlanner:
         formatted_state = {
             "dataset_info": state.dataset_info,
             "previous_tasks": state.previous_tasks,
-            "model_info": state.model_info,
+            "modelInfo": state.modelInfo,
             "evaluation_metric": state.evaluation_metric,
             "best_score": state.best_score,
         }

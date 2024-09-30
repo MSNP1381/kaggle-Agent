@@ -1,48 +1,39 @@
-Submissions are evaluated using [F1](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html) between the predicted and expected answers.
+Goal
+----
 
 
-F1 is calculated as follows:  
-
-F1\=2∗precision∗recallprecision\+recall
-
-
-where:
+It is your job to predict if a passenger survived the sinking of the Titanic or not.   
+For each in the test set, you must predict a 0 or 1 value for the variable.
 
 
-precision\=TPTP\+FP
+Metric
+------
 
 
-recall\=TPTP\+FN
+Your score is the percentage of passengers you correctly predict. This is known as [accuracy](https://en.wikipedia.org/wiki/Accuracy_and_precision#In_binary_classification).
 
 
-and:
+Submission File Format
+----------------------
 
 
-
-> True Positive \[TP] \= your prediction is 1, and the ground truth is also 1 \- you predicted a *positive* and that's *true*!  
-> 
->  False Positive \[FP] \= your prediction is 1, and the ground truth is 0 \- you predicted a *positive*, and that's *false*.  
-> 
->  False Negative \[FN] \= your prediction is 0, and the ground truth is 1 \- you predicted a *negative*, and that's *false*.
+You should submit a csv file with exactly 418 entries **plus** a header row. Your submission will show an error if you have extra columns (beyond PassengerId and Survived) or rows.  
+  
+The file should have exactly 2 columns:
 
 
-Submission File
----------------
-
-
-For each ID in the test set, you must predict 1 if the tweet is describing a real disaster, and 0 otherwise. The file should contain a header and have the following format:
+* PassengerId (sorted in any order)
+* Survived (contains your binary predictions: 1 for survived, 0 for deceased)
 
 
 
-> id,target  
-> 
->  0,0  
-> 
->  2,0  
-> 
->  3,1  
-> 
->  9,0  
-> 
->  11,0
+```
+PassengerId,Survived  
+892,0  
+893,1  
+894,0  
+Etc.
+```
+
+You can download an example submission file (gender\_submission.csv) on the [Data page](https://www.kaggle.com/c/titanic/data).
 

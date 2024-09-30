@@ -3,7 +3,7 @@ import httpx
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from typing import Dict, Any, Union, List
-from langchain.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from prompts.prompts import PLANNER_PROMPT
 from states.main import KaggleProblemState

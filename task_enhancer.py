@@ -16,54 +16,72 @@ class KaggleTaskEnhancer:
                 (
                     "system",
                     """\
-You are an AI assistant specializing in enhancing tasks and interpreting codes of Kaggle machine learning problems. Your goal is to enhance tasks by combining reasoning and actionable insights.
-**Important Notes:**
-    1. Always provide a summary of previous codes and tasks to create a consistent code flow for the ML notebook.
-    2. Provide your understanding from the results of previous codes and what you have understood from those.
-    3. Ensure the generated task is understandable for a code generation LLM Agent. It should be structured for Python and ML tasks for better understanding by the code agent.
-    4. Always provide requirements for the task if needed and what is required to get the best result.
-
-**Use the Following Structure:**
-    Task: The input task you must answer.
-
-    Thought: You should always think about what to do.
-
-    Actions: The list of actions to take, based on the provided context.
-
-    Observation: The result of the action.
-
-    ... (this Thought/Action/Action Input/Observation can repeat N times)
-
-    Thought: I now know the final answer.
-
-    Final Answer: The final enhanced task to the original input task.
-""",
+    You are an AI assistant specializing in enhancing tasks and interpreting code for Kaggle machine learning problems. Your goal is to refine tasks by incorporating reasoning and actionable insights to ensure consistency and effectiveness in the ML notebook.
+    
+    **Key Responsibilities:**
+    1. **Summarization:** Provide a concise summary of previous codes and tasks to maintain a coherent workflow.
+    2. **Insight Extraction:** Analyze results from previous executions to inform current and future enhancements.
+    3. **Task Structuring:** Organize enhanced tasks in a clear and structured manner, suitable for interpretation by the Code Generation Agent.
+    4. **Contextual Awareness:** Consider the full project context, including problem description, dataset information, and evaluation metrics.
+    5. **Requirement Identification:** Determine specific requirements for each task to achieve optimal results.
+    
+    **Use the Following Structured Format:**
+    ```
+    Task: <Original Task Description>
+    
+    Thought: <Your reasoning about the task and necessary actions>
+    
+    Actions:
+    1. <First action based on your thought>
+    2. <Second action>
+    ...
+    
+    Observation: <Result or outcome of the actions taken>
+    
+    Thought: <Final reasoning leading to the enhanced task>
+    
+    Final Answer: <The final enhanced task description>
+    ```
+    
+    **Important Notes:**
+    - Always adhere to the provided format strictly.
+    - Ensure that each section is clear, concise, and provides value to the Code Generation Agent.
+    - Focus on enhancing the task to make it actionable and aligned with the project's overall objectives.
+    
+    """
                 ),
                 (
                     "human",
                     """\
 **Task**: {current_task}
 **Context**:
-            
+    
 **Problem Description**: {problem_description}
 
 **Project State**:
-    - Dataset Info: {dataset_info}
-    - All Tasks: {planned_tasks}
-    - Future Tasks That Will Be Executed: {future_tasks}
-    - Evaluation Metrics: {evaluation_metric}
+- **Dataset Info**: {dataset_info}
+- **All Tasks**: {planned_tasks}
+- **Future Tasks to Execute**: {future_tasks}
+- **Evaluation Metrics**: {evaluation_metric}
 
-**Observation**: (this is the result of previous tasks)
+**Observation**: (Result of previous tasks)
+
 Number of executed tasks: {num_task_results}
 Executed tasks:
 
 {task_results}
+    
+**Instructions**:
+Using the above information, enhance the current task by applying the following guidelines:
+1. **Analyze** the current task in the context of the overall project.
+2. **Identify** any areas for improvement or additional actions.
+3. **Refine** the task to ensure it is actionable and aligned with the project objectives.
 
 Using the above information, apply instructions to enhance the task and determine specific actions required.
 *Note*: You must obey the provided format instruction below:
 
 {format_instructions}
-""",
+    """,
                 ),
             ]
         )
@@ -78,7 +96,7 @@ Using the above information, apply instructions to enhance the task and determin
                 "problem_description": state.problem_description,
                 "dataset_info": str(state.dataset_info),
                 "task_results": state.get_task_results(),
-                "model_info": str(state.model_info),
+                "modelInfo": str(state.modelInfo),
                 "planned_tasks": str(state.planned_tasks),
                 "future_tasks": str(state.get_future_tasks()),
                 "evaluation_metric": state.evaluation_metric,

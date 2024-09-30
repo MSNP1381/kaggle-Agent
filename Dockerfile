@@ -5,7 +5,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 USER ${NB_UID}
 
-RUN mamba install --yes jupyter_kernel_gateway ipykernel matplotlib numpy nltk && \
+RUN mamba install --yes jupyter_kernel_gateway ipykernel matplotlib scikit-learn numpy nltk && \
     mamba clean --all -f -y && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
@@ -18,7 +18,7 @@ COPY .env_docker .env
 # ENV TOKEN your_token_value_here
 CMD ["jupyter", "notebook", \
     "--ip=0.0.0.0", \
-    "--port=8888", \
+    "--port=8787", \
     "--NotebookApp.token=''", \
     "--NotebookApp.password=''", \
     "--NotebookApp.allow_origin='*'", \
@@ -27,6 +27,6 @@ CMD ["jupyter", "notebook", \
     "--NotebookApp.allow_remote_access=True", \
     "--FileContentsManager.allow_hidden=True"]
 
-EXPOSE 8888
+EXPOSE 8787
 
 WORKDIR "${HOME}"
