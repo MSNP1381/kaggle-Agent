@@ -32,11 +32,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def remove_color(text):
-    ansi_escape = re.compile(
-        r"\x1B\[[0-?]*[ -/]*[@-~]"
-    )  # I looked it up and the library uses ANSI codes internally so I believe this is the right re.compile
-    return ansi_escape.sub("", text)
+
+def remove_color(clean_text : str) -> str:
+    """
+    Clean the stdout text by removing ANSI color codes and other unwanted characters.
+    """
+    clean_text = re.sub(r"\\x1b\[\d+;\d+m~", "", clean_text)
+    clean_text = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "", clean_text)
+    return clean_text
 
 
 class GeneratedCode(BaseModel):
@@ -92,6 +95,7 @@ class CodeGenerationAgent:
         self.llm = ChatOpenAI(
             base_url=base_url, model=model, http_client=proxy, temperature=0
         ).with_structured_output(schema=GeneratedCode)
+        self.uploaded=False
         # IMPROVED_CODE_GEN_PROMPT.messages[0]
 
         # zeroshot_chain =  LangChainPredict(self.code_gen_prompt, self.llm) |  self.output_parser
@@ -193,7 +197,7 @@ code is :
         return {"ast_variables": variables}
 
     def code_check(self, state: CodeGraphState):
-        print("---CHECKING CODE---")
+        logger.info("---CHECKING CODE---")
         code_solution = state["generation"]
         iterations = state["iterations"]
 
@@ -203,7 +207,7 @@ code is :
         try:  #
             result = self.nb_executor.test_and_execute(imports + "\n" + code)
             result = exec2s(result)
-            print("---NO CODE TEST FAILURES---")
+            logger.info("✅ ---NO CODE TEST FAILURES--- ✅")
             return {
                 "generation": code_solution,
                 "iterations": iterations,
@@ -212,7 +216,7 @@ code is :
             }
         except CellError as e:
 
-            print(f"---CODE CHECK FAILED: {e.ename}---")
+            logger.warn(f"❌ ---CODE CHECK FAILED: {e.ename}--- ❌")
 
             m = [
                 (
@@ -222,7 +226,7 @@ Your latest solution to code failed the code execution test:
 explain what error it is and how to solve it
 **error_message:**
 ```
-   Error name {remove_color(cc(str(e.traceback)))}
+Error name {remove_color(cc(str(e.traceback)))}
 - 
 ```
 """,
@@ -266,12 +270,12 @@ explain what error it is and how to solve it
         iterations = state["iterations"]
 
         if error == "no" or iterations == self.max_iterations:
-            print("---DECISION: FINISH---")
+            logger.info("---DECISION: FINISH---")
             return "end"
         elif error == "yes":
             return "reset_procedure"
         else:
-            print("---DECISION: RE-TRY SOLUTION---", "iters No.", iterations)
+            logger.warn("---DECISION: RE-TRY SOLUTION---", "iters No.", iterations)
             return "generate"
 
     def create_workflow(self):
@@ -364,7 +368,15 @@ explain what error it is and how to solve it
         kaggle_state.task_codes_results = new_task_codes
         self.nb_executor.is_restarted = False
         return {"error": "no", "kaggle_state": kaggle_state}
+    def _cp_files(self, state: CodeGraphState):
+        # self.dataset_path = "./ongoing/train.csv"
+        # self.test_dataset_path = "./ongoing/test.csv"
 
+        with open(state.dataset_path,'rb') as f:
+            env_var = self.nb_executor.upload_file_env(f)
+        with open(state.test_dataset_path,'rb') as f:
+            env_var = self.nb_executor.upload_file_env(f)
+        
     def __call__(self, state: KaggleProblemState):
         initial_state = {
             "kaggle_state": state,
@@ -373,7 +385,9 @@ explain what error it is and how to solve it
             "messages": [],
         }
         task_codes = state.task_codes_results
-
+        if self.uploaded==False:
+            self._cp_files(state)
+            self.uploaded=True
         result = self.workflow.invoke(initial_state, config=self.config)
 
         # print( str(result.get("result", "nothing")))

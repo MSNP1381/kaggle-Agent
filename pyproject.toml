@@ -28,6 +28,8 @@ e2b-code-interpreter = "^0.0.10"
 kaggle = "^1.6.17"
 motor = "^3.6.0"
 black = "^24.8.0"
+ipykernel = "^6.29.5"
+ipython = "^8.27.0"
 
 
 

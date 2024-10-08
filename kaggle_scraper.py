@@ -1,5 +1,6 @@
 import os
 import json
+import pprint
 import zipfile
 import httpx
 from langchain_openai import ChatOpenAI
@@ -14,7 +15,8 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain.output_parsers.fix import StrOutputParser
 from kaggle.api.kaggle_api_extended import KaggleApi
 from markdownify import markdownify
-
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 from pydantic import BaseModel, Field
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
@@ -41,12 +43,13 @@ class Evaluation(BaseModel):
     )
 
 
+
 class ScrapeKaggle:
     def __init__(
         self,
         client: MongoClient,
         config=None,
-        proxy="http://127.0.0.1:2080",
+        proxy=None,
         base_url="https://api.avalai.ir/v1",
     ):
         """
@@ -61,11 +64,13 @@ class ScrapeKaggle:
         )
         self.config = config
         self.mongo_dict = {}
-        
+        http_client=None
+        if proxy:
+           http_client= httpx.Client(proxy=proxy)
         self.llm = ChatOpenAI(
                 base_url=base_url,
                 model="gpt-4o-mini",
-                http_client=httpx.Client(proxy=proxy),
+                http_client=http_client,
                 api_key=os.getenv("OPENAI_API_KEY"),
                 temperature=0,
             )
@@ -90,11 +95,15 @@ class ScrapeKaggle:
         # chrome_options.add_argument("--disable-gpu")
         # chrome_options.add_argument("--headless")
         # chrome_options.add_argument("--headless=new")
+        
         try:
-            driver = webdriver.Chrome(
-            # options=chrome_options,
-            # service=Service('/usr/bin/chromedriver'),
-        )
+            options = webdriver.ChromeOptions()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--headless') 
+            driver = webdriver.Remote(
+                command_executor='http://localhost:4444/wd/hub',
+                options=options
+            )
    
 
             driver.get(append_url(challenge_url , "overview"))
@@ -158,9 +167,25 @@ class ScrapeKaggle:
         if not challenge_url.endswith("/"):
             challenge_url+='/'
         return self.scraped_data_collection.find_one({"challenge_url": challenge_url})
+    
+    def _init_state(self, ):
+        self.dataset_path = "./ongoing/train.csv"
+        self.test_dataset_path = "./ongoing/test.csv"
+        # with open(self.dataset_path) as f:
+        #     env_var = self.nb_executor.upload_file_env(f)
+        # with open(self.test_dataset_path) as f:
+        #     env_var = self.nb_executor.upload_file_env(f, env_var="TEST_FILE")
 
+        
+        return{
+                # "file_env_var": env_var,
+                "dataset_path": self.dataset_path,
+                "test_dataset_path": self.test_dataset_path,
+            }
+        
     def __call__(self, state: KaggleProblemState):
         challenge_url = state.challenge_url
+        download_info = self.download_challenge_data(challenge_url)
         result = self.get_saved_challenge_data(challenge_url)
         data = None
         if result:
@@ -170,17 +195,17 @@ class ScrapeKaggle:
             data = self.summarize_data(**dict_)
 
         # Download challenge data and leaderboard
-        download_info = self.download_challenge_data(challenge_url)
-        
-        return {
+        base_response= {
             "index": -1,
             "problem_description": data["description"],
-            "dataset_info": data["data_details"],
+            "dataset_info": data["data_details"]+"\n\n\n---\n trian dataset path: ~/train.csv \n\n\n---\n test dataset path: ~/test.csv",
             "evaluation_metric": data["evaluation"]["metric"],
             "evaluation_description": data["evaluation"]["description"],
             "data_path": download_info["data_path"] if download_info else None,
             "leaderboard_path": download_info["leaderboard_path"] if download_info else None
         }
+        d=self._init_state()
+        return base_response | d
 
     def download_challenge_data(self, challenge_url):
         """
@@ -194,7 +219,7 @@ class ScrapeKaggle:
         """
         # Extract competition name from URL
         competition_name = challenge_url.split('/')[-1]
-
+        print("*"*20,"\n"*3,competition_name,challenge_url,"*"*20,"\n"*3)
         try:
             # Create directories to store the downloaded files
             ongoing_dir = f"./ongoing"
@@ -257,7 +282,7 @@ class ScrapeKaggle:
 
         result = {
             "description": summarized_description,
-            "evaluation": summarized_evaluation,
+            "evaluation": summarized_evaluation.model_dump(),
             "data_details": summarized_data,
         }
 
@@ -288,4 +313,11 @@ class TestScrapeKaggle(unittest.TestCase):
         self.assertIn("leaderboard_path", result)
 
 if __name__ == "__main__":
-    unittest.main()
+    from dotenv import load_dotenv
+    load_dotenv()
+    client=MongoClient(
+            host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
+        )
+    state=KaggleProblemState(challenge_url="https://www.kaggle.com/competitions/titanic")
+    scraper = ScrapeKaggle(client,)
+    pprint.pprint(scraper(state))

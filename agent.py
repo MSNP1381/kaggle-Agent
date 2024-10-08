@@ -54,14 +54,14 @@ class KaggleProblemSolver:
     def _init_state(self, url: str):
         self.dataset_path = "./ongoing/train.csv"
         self.test_dataset_path = "./ongoing/test.csv"
-        with open(self.dataset_path) as f:
+        with open(self.dataset_path,'rb') as f:
             env_var = self.nb_executor.upload_file_env(f)
-        with open(self.test_dataset_path) as f:
-            env_var = self.nb_executor.upload_file_env(f, env_var="TEST_FILE")
+        with open(self.test_dataset_path,'rb') as f:
+            env_var = self.nb_executor.upload_file_env(f)
 
         return KaggleProblemState(
             **{
-                "file_env_var": env_var,
+                # "file_env_var": env_var,
                 "challenge_url": url,
                 "dataset_path": self.dataset_path,
             }
@@ -106,10 +106,10 @@ class KaggleProblemSolver:
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
 
         graph_builder.add_edge("enhancer", "code_agent")
-        graph_builder.add_edge("code_agent", "submission_node")  # Connect code_agent to submission_node
+        # graph_builder.add_edge("code_agent", "en")  # Connect code_agent to submission_node
         # graph_builder.add_edge("submission_node", "executor")
         graph_builder.add_conditional_edges(
-            "submission_node", self.is_plan_done, path_map={"submission_node": 'submission_node', "enhancer": "enhancer"}
+            "code_agent", self.is_plan_done, path_map={"submission_node": 'submission_node', "enhancer": "enhancer"}
         )
         graph_builder.add_edge("submission_node", END)
 

@@ -35,11 +35,10 @@ class AppModule(Module):
                 "General", "recursion_limit", fallback=50
             ),
             "callbacks": [
-   
                 CallbackHandler(
                     public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
                     secret_key=os.environ["LANGFUSE_SECRET_KEY"],
-                    host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+                    host=os.getenv("LANGFUSE_HOST", "http://127.0.0.1:3000"),
         session_id=session_id,
                 )
             ],
@@ -83,7 +82,6 @@ class AppModule(Module):
 })
         print("Connected to Postgres")
         return conn.__enter__()
-         
     @singleton
     @provider
     def provide_scraper(self, client: MongoClient, config: dict) -> ScrapeKaggle:

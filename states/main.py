@@ -10,8 +10,11 @@ from utils import dict_concat
 
 class KaggleProblemState(BaseModel):
     index: int = Field(default=-1)
+    quantitative_analysis:str=Field(default="")
+    qualitative_analysis:str=Field(default="")
     problem_description: str = Field(default="")
-    dataset_path: str = Field(default="./train.py")
+    dataset_path: str = Field(default="./ongoging/train.csv")
+    test_dataset_path: str = Field(default="./ongoging/test.csv")
     challenge_url: str = Field(default="")
     dataset_info: Optional[str] = Field(default="")
     current_task: Optional[str] = Field(default="")

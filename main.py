@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from langgraph.checkpoint.postgres import PostgresSaver
 
 def main():
-    print(".env loaded:", load_dotenv())
+    print(".env loaded:", load_dotenv(override=False))
 
     url = config_reader.get("Kaggle", "default_challenge_url")
 
@@ -30,7 +30,7 @@ def main():
     # )
     
     checkpointer = PostgresSaver(postgres_client)
-    checkpointer.setup()
+    # checkpointer.setup()
     # checkpointer.setup()
     # Get the KaggleProblemSolver instance from the injector
     solver = injector.get(KaggleProblemSolver)

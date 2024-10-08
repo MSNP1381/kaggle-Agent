@@ -1,11 +1,13 @@
+import urllib.parse
+import base64        
 from queue import Empty
-import time
+import time,json
 from typing import IO, List
 from jupyter_client import KernelManager
 from utils import CellResult, NotebookExecutorInterface, CellError
 from utils import CellResult, NotebookExecutorInterface, CellError
 from datetime import datetime
-import os
+import os,requests
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 from nbformat.v4 import new_notebook, new_code_cell, new_output
@@ -130,19 +132,46 @@ class JupyterExecutor(NotebookExecutorInterface):
 
         return results
 
-    def upload_file_env(self, file: IO, env_var: str = None):
-        if not env_var:
-            env_var = "MY_FILE"
+    def upload_file_env(self,myfile:IO, resourceDstPath="~/") -> str:
+        """
+        Uploads File to Jupyter Notebook Server
+        ----------------------------------------
+        :param token:
+            The authorization token issued by Jupyter for authentication 
+            (enabled by default as of version 4.3.0)
+        :param filePath:
+            The file path to the local content to be uploaded
 
-        # Assuming we save the file and set the environment variable manually
-        # file_path = "/tmp/" + file.name
-        file_path =  file.name
-        with open(file_path, "wb") as f:
-            f.write(bytes(file.read(), "utf8"))
+        :param resourceDstPath:
+            The path where resource should be placed.
+            The destination directory must exist.
 
-        # Setting the environment variable
-        self.kc.execute(f"{env_var} = '{file_path}'")
-        return env_var
+        :param jupyterUrl:
+            The url to the jupyter server. Default value is typical localhost installation.
+
+        :return: server response
+        """
+        return 
+        name= os.path.basename(myfile.name)
+        dstPath = urllib.parse.quote(name)
+        print(dstPath)
+        dstUrl = f'{self.url}/api/contents/{dstPath}'
+        # headers = {'Authorization': f'token {self.token}'}
+        headers = None
+
+    
+        data = myfile.read()
+        b64data = base64.b64encode(data).decode('utf-8')
+        body = json.dumps({
+            'content': b64data,
+            'name': name,
+            'path': resourceDstPath,
+            'format': 'base64',
+            'type': 'file'
+        })
+        response = requests.put(dstUrl, data=body, headers=headers, verify=True)
+        print(response.text)
+        return response
 
     def add_to_notebook(self, code, outputs, notebook_path=None):
         """Saves the current IPython kernel state to an .ipynb file, including cell outputs."""

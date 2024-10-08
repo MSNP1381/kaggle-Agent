@@ -62,15 +62,15 @@ class DataUtils:
         dataset = self._load_dataset(state.dataset_path)
         if dataset is None:
             return {"error": "Failed to load dataset"}
-
         result = self.analyze_dataset(dataset, state.problem_description)
-        
-        analysis_result = result.model_dump()
-        analysis_result["dataset_overview"] = self._generate_dataset_overview(dataset)
-        analysis_result["dataset_path"] = state.dataset_path
-        analysis_result["file_env_var"] = state.file_env_var
+        analysis_result = self._generate_dataset_overview(dataset)
 
-        return {"dataset_info": json.dumps(analysis_result, indent=2)}
+        return {
+            "dataset_info": analysis_result,
+            "quantitative_analysis":result.quantitative_analysis,
+            "qualitative_analysis":result.qualitative_analysis,
+            "feature_recommendations": result.feature_recommendations
+                }
 
     def _load_dataset(self, dataset_path: str) -> Optional[pd.DataFrame]:
         try:

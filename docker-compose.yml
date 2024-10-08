@@ -1,4 +1,5 @@
 services:
+  # MongoDB service from the first compose
   mongodb:
     image: mongo:latest
     container_name: mongodb
@@ -10,19 +11,64 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  # App service from the first compose
   app:
     build:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - .env_docker
-    environment:
-      - TOKEN=de6838252f95d3b9e803b28df33b4baa
+      - .env.docker
     depends_on:
       - mongodb
     ports:
-      - "8787:8787"
+      - "8888:8888"
+
+  # Selenium service from the first compose
+  selenium:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium
+    ports:
+      - "4444:4444"
+    environment:
+      - SCREEN_WIDTH=1920
+      - SCREEN_HEIGHT=1080
+
+  # Langfuse server from the second compose
+  langfuse-server:
+    image: langfuse/langfuse:2
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - NEXTAUTH_SECRET=mysecret
+      - SALT=mysalt
+      - ENCRYPTION_KEY=3c97d566b8fd80e8e7bb8dbecb36c72db049003a37899f1c4c83cdca1d68c211
+      - NEXTAUTH_URL=http://localhost:3000
+      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED:-true}
+      - LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES=${LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:-false}
+
+  # Postgres DB from the second compose
+  db:
+    image: postgres
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - database_data:/var/lib/postgresql/data
 
 volumes:
   mongo-data:
-
+  database_data:
+    driver: local
