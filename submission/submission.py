@@ -1,7 +1,8 @@
 import kaggle
 from states.main import KaggleProblemState
 
-class SubmissionNode():
+
+class SubmissionNode:
 
     def __call__(self, state: KaggleProblemState, config: dict):
         competition = config.get("competition")
@@ -17,7 +18,7 @@ class SubmissionNode():
 
         # Retrieve the submission result
         submissions = kaggle.api.competition_submissions(competition)
-        latest_submission = max(submissions, key=lambda x: x['date'])
+        latest_submission = max(submissions, key=lambda x: x["date"])
         print(f"Latest submission result: {latest_submission}")
 
         # Update the state with the latest submission result

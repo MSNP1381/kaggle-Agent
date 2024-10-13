@@ -87,6 +87,7 @@ def exec2s(data: Union[CellResult, List[CellResult]]) -> str:
         out_s = str(data)
     return out_s
 
+
 def get_top_10_percent_mean(json_path: str) -> float:
     """
     Calculate the mean of the top 10 percent score values from the provided JSON schema.
@@ -95,7 +96,7 @@ def get_top_10_percent_mean(json_path: str) -> float:
     :return: The mean of the top 10 percent score values.
     """
 
-    with open(json_path, 'r') as file:
+    with open(json_path, "r") as file:
         json_data = json.load(file)
 
     submissions = json_data.get("submissions", [])
@@ -120,6 +121,7 @@ def get_top_10_percent_mean(json_path: str) -> float:
     top_10_percent_scores = scores[:top_10_percent_count]
 
     return sum(top_10_percent_scores) / len(top_10_percent_scores)
+
 
 def append_url(base_url: str, sub_url: str, use_https: bool = True) -> str:
     """

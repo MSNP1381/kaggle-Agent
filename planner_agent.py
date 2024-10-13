@@ -40,7 +40,7 @@ class KaggleProblemPlanner:
         # self.code_generation_agent = CodeGenerationAgent(config=config, proxy=proxy, nb_executor=self.nb_executor)
         self.planner_prompt = PLANNER_PROMPT
 
-    def plan(self, state: KaggleProblemState)->List[str]:
+    def plan(self, state: KaggleProblemState) -> List[str]:
         """
         Creates or updates a plan to solve the Kaggle problem based on the current state.
 
@@ -60,7 +60,6 @@ class KaggleProblemPlanner:
                     "quantitative_analysis": state.quantitative_analysis,
                     "qualitative_analysis": state.qualitative_analysis,
                     "format_instructions": parser.get_format_instructions(),
-                    
                 },
                 config=self.config,
             )

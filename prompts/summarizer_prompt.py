@@ -8,12 +8,9 @@ CHALLENGE_DESCRIPTION_PROMPT = [
 3. Any unique aspects or constraints of the challenge
 4. Key information that would be relevant for developing a solution
 
-Explain your reasoning step-by-step, ensuring that your summary captures all crucial details for a data scientist to understand the challenge's core requirements."""
+Explain your reasoning step-by-step, ensuring that your summary captures all crucial details for a data scientist to understand the challenge's core requirements.""",
     ),
-    (
-        "user",
-        "Challenge description:\n\n```markdown\n{{text}}\n```"
-    ),
+    ("user", "Challenge description:\n\n```markdown\n{{text}}\n```"),
 ]
 
 CHALLENGE_EVALUATION_PROMPT = [
@@ -28,12 +25,9 @@ CHALLENGE_EVALUATION_PROMPT = [
 
 Use this formatting instruction: {{format_instructions}}
 
-Explain your reasoning step-by-step, ensuring that your explanation provides clear guidance on how submissions will be evaluated and what strategies might be effective for achieving a high score."""
+Explain your reasoning step-by-step, ensuring that your explanation provides clear guidance on how submissions will be evaluated and what strategies might be effective for achieving a high score.""",
     ),
-    (
-        "user",
-        "Challenge evaluation description:\n\n```markdown\n{{text}}\n```"
-    ),
+    ("user", "Challenge evaluation description:\n\n```markdown\n{{text}}\n```"),
 ]
 
 CHALLENGE_DATA_PROMPT = [
@@ -49,12 +43,9 @@ CHALLENGE_DATA_PROMPT = [
 
 If there isn't a clear target column, explain how the evaluation might be conducted based on the provided data.
 
-Explain your reasoning step-by-step, ensuring that your description gives a comprehensive overview of the dataset and its relevance to the challenge."""
+Explain your reasoning step-by-step, ensuring that your description gives a comprehensive overview of the dataset and its relevance to the challenge.""",
     ),
-    (
-        "user",
-        "Challenge data description:\n\n```markdown\n{{text}}\n```"
-    ),
+    ("user", "Challenge data description:\n\n```markdown\n{{text}}\n```"),
 ]
 
 DATASET_ANALYSIS_PROMPT = """

@@ -6,10 +6,12 @@ from langchain_openai import ChatOpenAI
 from code_generation_agent import CodeGenerationAgent
 from kaggle_scraper import ScrapeKaggle
 from psycopg import Connection
+
 # from nbexecuter_e2b import E2B_executor, SandboxManager
 from executors.nbexecutor_jupyter import JupyterExecutor
 from planner_agent import KaggleProblemPlanner
-from replanner import KaggleProblemRePlanner
+
+# from replanner import KaggleProblemRePlanner
 from task_enhancer import KaggleTaskEnhancer
 from data_utils import DataUtils
 import os
@@ -19,6 +21,8 @@ from langfuse.callback import CallbackHandler
 import time
 
 from submission.submission import SubmissionNode  # Correct Python import
+from states.memory import MemoryAgent  # Add this import
+
 
 class AppModule(Module):
 
@@ -39,7 +43,7 @@ class AppModule(Module):
                     public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
                     secret_key=os.environ["LANGFUSE_SECRET_KEY"],
                     host=os.getenv("LANGFUSE_HOST", "http://127.0.0.1:3000"),
-        session_id=session_id,
+                    session_id=session_id,
                 )
             ],
         }
@@ -73,15 +77,20 @@ class AppModule(Module):
             http_client=proxy,
             temperature=config_reader.getfloat("API", "temperature"),
         )
+
     @singleton
     @provider
     def provide_postgres_connection(self) -> Connection:
-        conn=Connection.connect(os.getenv("DATABASE_URL"),** {
-    "autocommit": True,
-    "prepare_threshold": 0,
-})
+        conn = Connection.connect(
+            os.getenv("DATABASE_URL"),
+            **{
+                "autocommit": True,
+                "prepare_threshold": 0,
+            },
+        )
         print("Connected to Postgres")
         return conn.__enter__()
+
     @singleton
     @provider
     def provide_scraper(self, client: MongoClient, config: dict) -> ScrapeKaggle:
@@ -94,19 +103,24 @@ class AppModule(Module):
     ) -> KaggleProblemPlanner:
         return KaggleProblemPlanner(config, proxy, llm=llm)
 
-    @singleton
-    @provider
-    def provide_re_planner(
-        self, config: dict, proxy: httpx.Client, llm: ChatOpenAI
-    ) -> KaggleProblemRePlanner:
-        return KaggleProblemRePlanner(config, proxy, llm=llm)
+    # @singleton
+    # @provider
+    # def provide_re_planner(
+    #     self, config: dict, proxy: httpx.Client, llm: ChatOpenAI
+    # ) -> KaggleProblemRePlanner:
+    #     return KaggleProblemRePlanner(config, proxy, llm=llm)
 
     @singleton
     @provider
     def provide_enhancer(
-        self, config: dict, proxy: httpx.Client, llm: ChatOpenAI
+        self, config: dict, llm: ChatOpenAI, memory_agent: MemoryAgent
     ) -> KaggleTaskEnhancer:
-        return KaggleTaskEnhancer(config, proxy, llm=llm)
+        return KaggleTaskEnhancer(config, llm, memory_agent)
+
+    @singleton
+    @provider
+    def provide_memory_agent(self, llm: ChatOpenAI) -> MemoryAgent:
+        return MemoryAgent(llm=llm)
 
     @singleton
     @provider
@@ -118,14 +132,23 @@ class AppModule(Module):
     @singleton
     @provider
     def provide_code_agent(
-        self, config: dict, proxy: httpx.Client, nb_executor: JupyterExecutor
+        self,
+        config: dict,
+        proxy: httpx.Client,
+        nb_executor: JupyterExecutor,
+        memory_agent: MemoryAgent,
     ) -> CodeGenerationAgent:
-        return CodeGenerationAgent(config, proxy=proxy, nb_executor=nb_executor)
+        return CodeGenerationAgent(
+            config, proxy=proxy, nb_executor=nb_executor, memory_agent=memory_agent
+        )
 
     @singleton
     @provider
     def provide_submission_node(self) -> SubmissionNode:
         return SubmissionNode()
+
+
+
 
 def create_injector():
     app_module = AppModule()

@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from data_utils import DataUtils
 from states.main import KaggleProblemState
 
+
 def load_dataset(dataset_path):
     try:
         return pd.read_csv(dataset_path)
@@ -19,6 +20,7 @@ def load_dataset(dataset_path):
     except Exception as e:
         print(f"Error loading dataset: {str(e)}")
         return None
+
 
 def main():
     # Load environment variables from .env file
@@ -79,6 +81,7 @@ def main():
     finally:
         if proxy:
             proxy.close()
+
 
 if __name__ == "__main__":
     main()

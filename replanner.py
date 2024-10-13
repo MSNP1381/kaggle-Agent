@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 from states.main import KaggleProblemState
+from states.memory import MemoryAgent  # Add this import
 
 
 class RePlanDecision(BaseModel):
@@ -26,10 +27,11 @@ class RePlanDecision(BaseModel):
 
 
 class KaggleProblemRePlanner:
-    def __init__(self, config, proxy, llm: ChatOpenAI):
+    def __init__(self, config, proxy, llm: ChatOpenAI, memory_agent: MemoryAgent):
         self.config = config
         self.llm = llm
         self.output_parser = PydanticOutputParser(pydantic_object=RePlanDecision)
+        self.memory_agent = memory_agent
 
         self.re_plan_prompt = ChatPromptTemplate.from_messages(
             [
@@ -54,7 +56,7 @@ class KaggleProblemRePlanner:
 **Your response should include:**
 1. **Decision:** Whether the plan needs to be changed.
 2. **Reasoning:** Explanation for your decision.
-3. **New Plan:** A list of revised tasks (if adjustments are required)."""
+3. **New Plan:** A list of revised tasks (if adjustments are required).""",
                 ),
                 (
                     "human",
@@ -74,19 +76,16 @@ class KaggleProblemRePlanner:
 {current_plan}
 
 **Question:**
-Based on the above information, should the project plan be adjusted? If so, please provide a revised list of tasks."""
+Based on the above information, should the project plan be adjusted? If so, please provide a revised list of tasks.""",
                 ),
             ]
         )
 
     def re_plan(self, state: KaggleProblemState) -> List[str]:
-        last_task = (
-            state.enhanced_tasks[state.index].enhanced_description
-            if hasattr(state.enhanced_task, "task")
-            else str(state.enhanced_task)
+        # Get relevant context from memory
+        relevant_context = self.memory_agent.get_relevant_context(
+            state.problem_description
         )
-        execution_result = self._get_execution_result(state.task_results, last_task)
-        current_plan = "\n".join(state.planned_tasks)
 
         response = self.llm.invoke(
             self.re_plan_prompt.format_messages(
@@ -96,6 +95,7 @@ Based on the above information, should the project plan be adjusted? If so, plea
                 execution_result=execution_result,
                 current_plan=current_plan,
                 format_instructions=self.output_parser.get_format_instructions(),
+                relevant_context="\n".join(relevant_context),
             ),
             config=self.config,
         )

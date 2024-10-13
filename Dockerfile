@@ -5,7 +5,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 USER ${NB_UID}
 
-RUN python -m pip install numpy pandas matplotlib seaborn scipy scikit-learn xgboost lightgbm statsmodels plotly nltk opencv-python matplotlib
+RUN python -m pip install numpy pandas matplotlib seaborn scipy scikit-learn xgboost lightgbm statsmodels plotly nltk opencv-python
 
 
 RUN python -m nltk.downloader punkt

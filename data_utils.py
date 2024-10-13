@@ -11,32 +11,41 @@ from langchain.output_parsers import PydanticOutputParser
 from prompts.utils import DATASET_ANALYSIS_PROMPT
 from states.main import KaggleProblemState
 
+
 class DatasetAnalysis(BaseModel):
-    quantitative_analysis: str = Field(description="Detailed quantitative analysis of the dataset")
-    qualitative_analysis: str = Field(description="Detailed qualitative analysis of the dataset")
-    feature_recommendations: Optional[List[str]] = Field(description="Suggested feature engineering and preprocessing steps")
+    quantitative_analysis: str = Field(
+        description="Detailed quantitative analysis of the dataset"
+    )
+    qualitative_analysis: str = Field(
+        description="Detailed qualitative analysis of the dataset"
+    )
+    feature_recommendations: Optional[List[str]] = Field(
+        description="Suggested feature engineering and preprocessing steps"
+    )
+
 
 class DataUtils:
-    def __init__(self, config: Dict[str, Any], proxy: Optional[httpx.Client], llm: ChatOpenAI):
+    def __init__(
+        self, config: Dict[str, Any], proxy: Optional[httpx.Client], llm: ChatOpenAI
+    ):
         self.config = config
         self.proxy = proxy
         self.llm = llm
         self.dataset_analysis_prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    DATASET_ANALYSIS_PROMPT
-                )
-            ]
+            [("system", DATASET_ANALYSIS_PROMPT)]
         )
         self.output_parser = PydanticOutputParser(pydantic_object=DatasetAnalysis)
-    
-    def analyze_dataset(self, dataset: pd.DataFrame, dataset_info: str) -> DatasetAnalysis:
+
+    def analyze_dataset(
+        self, dataset: pd.DataFrame, dataset_info: str
+    ) -> DatasetAnalysis:
         data_initial_info = self._generate_dataset_overview(dataset)
         dataset_head = dataset.head().to_string()
-        
+
         format_instructions = self.output_parser.get_format_instructions()
-        response = (self.dataset_analysis_prompt | self.llm | self.output_parser).invoke(
+        response = (
+            self.dataset_analysis_prompt | self.llm | self.output_parser
+        ).invoke(
             {
                 "data_initial_info": data_initial_info,
                 "dataset_overview": dataset_info,
@@ -67,10 +76,10 @@ class DataUtils:
 
         return {
             "dataset_info": analysis_result,
-            "quantitative_analysis":result.quantitative_analysis,
-            "qualitative_analysis":result.qualitative_analysis,
-            "feature_recommendations": result.feature_recommendations
-                }
+            "quantitative_analysis": result.quantitative_analysis,
+            "qualitative_analysis": result.qualitative_analysis,
+            "feature_recommendations": result.feature_recommendations,
+        }
 
     def _load_dataset(self, dataset_path: str) -> Optional[pd.DataFrame]:
         try:
@@ -83,8 +92,9 @@ class DataUtils:
             print(f"Error loading dataset: {str(e)}")
         return None
 
+
 def main():
-    load_dotenv()
+    load_dotenv(override=True)
     proxy_url = os.getenv("HTTP_PROXY_URL")
     proxy = httpx.Client(proxies=proxy_url) if proxy_url else None
 
@@ -117,7 +127,7 @@ def main():
         problem_description=problem_description,
         dataset_path=dataset_path,
         evaluation_metric="r2_score",
-        file_env_var="MY_FILE"
+        file_env_var="MY_FILE",
     )
 
     try:
@@ -129,6 +139,7 @@ def main():
     finally:
         if proxy:
             proxy.close()
+
 
 if __name__ == "__main__":
     main()

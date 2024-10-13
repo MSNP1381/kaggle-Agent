@@ -1,7 +1,5 @@
 import ast
-import json
 import operator
-import pprint
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph, START
 from typing import Annotated, List, TypedDict
@@ -14,11 +12,11 @@ from prompts.code_generation_prompt import (
     IMPROVED_CODE_GEN_PROMPT,
     VARIABLE_CORRECTION_PROMPT,
 )
-
+from states.memory import MemoryAgent
 import re
 import logging
-
 from utils import CellError, NotebookExecutorInterface, cc, exec2s
+from injector import inject
 
 # Initialize logging
 logging.basicConfig(
@@ -26,20 +24,41 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
         logging.FileHandler("code_generation_agent.log"),
-        logging.StreamHandler()
-    ]
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
 
 
+def remove_color(text: str) -> str:
+    """
+    Clean the text by removing ANSI color codes, escape sequences, and other special characters.
+    This function is particularly useful for cleaning stdout and error messages from Python exceptions.
 
-def remove_color(clean_text : str) -> str:
+    Args:
+        text (str): The input text to clean.
+
+    Returns:
+        str: The cleaned text.
     """
-    Clean the stdout text by removing ANSI color codes and other unwanted characters.
-    """
-    clean_text = re.sub(r"\\x1b\[\d+;\d+m~", "", clean_text)
-    clean_text = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "", clean_text)
-    return clean_text
+    # Remove ANSI escape sequences
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    text = ansi_escape.sub("", text)
+
+    # Remove other escape sequences
+    text = re.sub(r"\x1b\[\d+;\d+m", "", text)
+    text = re.sub(r"\x1b\[\d+m", "", text)
+
+    # Remove backspace characters
+    text = re.sub(r"\b", "", text)
+
+    # Remove carriage returns and line feeds
+    text = text.replace("\r", "").replace("\n", " ")
+
+    # Remove extra whitespace
+    text = " ".join(text.split())
+
+    return text
 
 
 class GeneratedCode(BaseModel):
@@ -47,12 +66,6 @@ class GeneratedCode(BaseModel):
 
     imports: str = Field(description="The import statements for the code")
     code: str = Field(description="The main code block")
-    summary: str = Field(
-        description="A brief summary of previous codes and the flow they follow"
-    )
-    # variables: Dict[str, str] = Field(
-    #     description="A dictionary of variable names and their descriptions"
-    # )
     description: str = Field(
         description="description of this code",
         default="",  # Optional field with default empty string
@@ -73,12 +86,20 @@ class CodeGraphState(TypedDict):
     messages: Annotated[List, operator.add]
 
 
+class ReActStep(BaseModel):
+    thought: str = Field(description="The agent's reasoning about the current situation")
+    action: str = Field(description="The action to be taken based on the thought")
+    action_input: dict = Field(description="Input parameters for the action")
+
+
 class CodeGenerationAgent:
+    @inject
     def __init__(
         self,
         config,
         proxy,
         nb_executor: NotebookExecutorInterface,
+        memory_agent: MemoryAgent,
         model="gpt-4o-mini",
         max_iterations=3,
         base_url="https://api.avalai.ir/v1",
@@ -95,302 +116,185 @@ class CodeGenerationAgent:
         self.llm = ChatOpenAI(
             base_url=base_url, model=model, http_client=proxy, temperature=0
         ).with_structured_output(schema=GeneratedCode)
-        self.uploaded=False
-        # IMPROVED_CODE_GEN_PROMPT.messages[0]
-
-        # zeroshot_chain =  LangChainPredict(self.code_gen_prompt, self.llm) |  self.output_parser
-        # zeroshot_chain = LangChainModule(zeroshot_chain)  #
-        # self.code_gen_chain = zeroshot_chain
+        self.uploaded = False
         self.code_gen_chain = self.code_gen_prompt | self.llm
-
         self.workflow = self.create_workflow()
+        self.memory_agent = memory_agent
 
-    def generate(self, state: CodeGraphState):
+    def add_initial_data_to_memory(self, state: KaggleProblemState):
+        # Add data utils output to long-term memory
+        data_utils_content = {
+            "dataset_info": state.dataset_info,
+            "quantitative_analysis": getattr(state, "quantitative_analysis", None),
+            "qualitative_analysis": getattr(state, "qualitative_analysis", None),
+        }
+        # Only add feature_recommendations if it exists
+        if hasattr(state, "feature_recommendations"):
+            data_utils_content["feature_recommendations"] = (
+                state.feature_recommendations
+            )
+
+        self.memory_agent.add_to_long_term_memory(
+            {"type": "data_utils", "content": data_utils_content}
+        )
+
+        # Add scraper output to long-term memory
+        self.memory_agent.add_to_long_term_memory(
+            {
+                "type": "scraper",
+                "content": {
+                    "problem_description": state.problem_description,
+                    "evaluation_metric": state.evaluation_metric,
+                },
+            }
+        )
+        self.memory_agent.add_to_short_term_memory(state.problem_description)
+        self.memory_agent.add_to_short_term_memory(state.get_task_results())
+
+    def react(self, state: CodeGraphState) -> ReActStep:
+        kaggle_state = state["kaggle_state"]
+        current_task = str(kaggle_state.enhanced_tasks[kaggle_state.index])
+        relevant_context = self.memory_agent.get_relevant_context(current_task)
+
+        prompt = f"""
+        Given the current task: {current_task}
+        And the relevant context: {relevant_context}
+
+        Think about the next step to take in solving this Kaggle problem.
+        Then decide on an action to take.
+
+        Respond in the following format:
+        Thought: [Your reasoning about the current situation]
+        Action: [The action to take. Choose from: GenerateCode, ExecuteCode, AnalyzeError, Finish]
+        Action Input: [A JSON object with parameters for the action]
+
+        Remember to consider the current state of the problem, any previous code generated, and potential errors or improvements.
+        """
+        response = self.llm.invoke(prompt)
+        return ReActStep.model_validate_json(response)
+
+    def generate_code(self, state: CodeGraphState, action_input: dict) -> CodeGraphState:
         logger.info("---GENERATING CODE SOLUTION---")
         kaggle_state = state["kaggle_state"]
         iterations = state["iterations"]
-        # error = state["error"]
         messages = state["messages"]
 
         try:
-            code_solution: GeneratedCode = self.code_gen_chain.invoke(
-                {
-                    "problem_description": kaggle_state.problem_description,
-                    "modelInfo": kaggle_state.modelInfo,
-                    "planned_tasks": kaggle_state.planned_tasks,
-                    "evaluation_metric": kaggle_state.evaluation_metric,
-                    "format_instructions": self.format_instructions,
-                    "messages": messages,
-                    "current_task": str(kaggle_state.enhanced_tasks[kaggle_state.index]),
-                    "format_instructions": self.format_instructions,
-                    "previous_tasks": kaggle_state.get_task_results(),
-                },
-                config=self.config,
-            )
-            m = [
-                (
-                    "ai",
-                    f"""
-codes description:
-{code_solution.description}
+            code_solution: GeneratedCode = self.code_gen_chain.invoke(action_input, config=self.config)
 
-code is :
-{code_solution.imports}
+            self.memory_agent.add_to_short_term_memory(code_solution.code)
+            self.memory_agent.add_to_long_term_memory({
+                "task": action_input["current_task"],
+                "code": code_solution.code,
+                "description": code_solution.description,
+            })
 
-{code_solution.code}
-
-"""
-                )
-            ]
-
-            logger.info("Code generation successful.")
             return {
+                **state,
                 "generation": code_solution,
                 "iterations": iterations,
                 "error": "no",
-                "messages": m,
+                "messages": messages + [("ai", str(code_solution))],
             }
         except Exception as e:
             logger.error(f"Error during code generation: {e}", exc_info=True)
             return {
+                **state,
                 "generation": GeneratedCode(imports="", code="", description=""),
-                "iterations": iterations,
+                "iterations": iterations + 1,
                 "error": "yes",
                 "erro_msg": str(e),
-                "iteration": iterations + 1,
                 "messages": messages,
             }
 
-    def check_and_correct_variables(self, state: CodeGraphState):
-        code_solution = state["generation"]
-        ast_variables = state["ast_variables"]
-        llm_variables = set(code_solution.variables.keys())
-
-        if ast_variables != llm_variables:
-            missing_in_llm = ast_variables - llm_variables
-            extra_in_llm = llm_variables - ast_variables
-
-            corrected_variables = self.llm.invoke(
-                self.variable_correction_prompt.format(
-                    code=code_solution.code,
-                    current_variables=code_solution.variables,
-                    missing_variables=list(missing_in_llm),
-                    extra_variables=list(extra_in_llm),
-                )
-            )
-
-            code_solution.variables = corrected_variables
-
-        return {"generation": code_solution}
-
-    def extract_variables_from_ast(self, state: CodeGraphState) -> dict[str, set[str]]:
-        code = state["generation"].code
-        tree = ast.parse(code)
-        variables = set()
-
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
-                variables.add(node.id)
-            elif isinstance(node, ast.arg):
-                variables.add(node.arg)
-
-        return {"ast_variables": variables}
-
-    def code_check(self, state: CodeGraphState):
-        logger.info("---CHECKING CODE---")
+    def execute_code(self, state: CodeGraphState) -> CodeGraphState:
+        logger.info("---EXECUTING CODE---")
         code_solution = state["generation"]
         iterations = state["iterations"]
 
-        imports = code_solution.imports
-        code = code_solution.code
-
-        try:  #
-            result = self.nb_executor.test_and_execute(imports + "\n" + code)
-            result = exec2s(result)
-            logger.info("✅ ---NO CODE TEST FAILURES--- ✅")
+        try:
+            result = self.nb_executor.test_and_execute(str(code_solution))
             return {
-                "generation": code_solution,
-                "iterations": iterations,
+                **state,
+                "result": exec2s(result),
                 "error": "no",
-                "result": result,
             }
         except CellError as e:
-
-            logger.warn(f"❌ ---CODE CHECK FAILED: {e.ename}--- ❌")
-
-            m = [
-                (
-                    "user",
-                    f"""
-Your latest solution to code failed the code execution test: 
-explain what error it is and how to solve it
-**error_message:**
-```
-Error name {remove_color(cc(str(e.traceback)))}
-- 
-```
-""",
-                )
-            ]
-            llm = ChatOpenAI(
-                base_url=self.base_url,
-                model="gpt-4o-mini",
-                http_client=self.proxy,
-                temperature=0,
-            )
-            kaggle_state = state["kaggle_state"]
-            res = (self.code_gen_prompt | llm | StrOutputParser()).invoke(
-                {
-                    "problem_description": kaggle_state.problem_description,
-                    "modelInfo": kaggle_state.modelInfo,
-                    "planned_tasks": kaggle_state.planned_tasks,
-                    "evaluation_metric": kaggle_state.evaluation_metric,
-                    "format_instructions": self.format_instructions,
-                    "messages": state["messages"] + m,
-                    "current_task": str(
-                        kaggle_state.enhanced_tasks[kaggle_state.index]
-                    ),
-                    "previous_tasks": kaggle_state.get_task_results(),
-                },
-                config=self.config,
-            )
-            m += [("ai", res)]
-
+            logger.warn(f"❌ ---CODE EXECUTION FAILED: {e.ename}--- ❌")
             return {
-                "generation": code_solution,
-                "iterations": iterations,
+                **state,
                 "error": "yes",
                 "erro_msg": e.traceback,
-                "iteration": state["iterations"] + 1,
-                "messages": m,
+                "iterations": iterations + 1,
             }
 
-    def decide_to_finish(self, state: CodeGraphState):
-        error = state["error"]
-        iterations = state["iterations"]
+    def analyze_error(self, state: CodeGraphState, action_input: dict) -> CodeGraphState:
+        logger.info("---ANALYZING ERROR---")
+        error_msg = state["erro_msg"]
+        
+        prompt = f"""
+        Analyze the following error and suggest a fix:
+        {error_msg}
 
-        if error == "no" or iterations == self.max_iterations:
-            logger.info("---DECISION: FINISH---")
-            return "end"
-        elif error == "yes":
-            return "reset_procedure"
-        else:
-            logger.warn("---DECISION: RE-TRY SOLUTION---", "iters No.", iterations)
-            return "generate"
+        Consider the current task: {action_input['current_task']}
+        And the current code:
+        {state['generation']}
+
+        Provide your analysis and suggestion in the following format:
+        Analysis: [Your understanding of the error]
+        Suggestion: [Your suggested fix]
+        """
+
+        response = self.llm.predict(prompt)
+        return {
+            **state,
+            "error_analysis": response,
+        }
 
     def create_workflow(self):
         workflow = StateGraph(CodeGraphState)
 
-        workflow.add_node("generate", self.generate)
-        workflow.add_node("reset_procedure", self.__reset_procedure)
-        # workflow.add_node("extract_var_ast", self.extract_variables_from_ast)
-        # workflow.add_node(
-        #     "check_and_correct_variables", self.check_and_correct_variables
-        # )
-        # ast_variables = self.extract_variables_from_ast(code_solution.code)
-        # code_solution = self.check_and_correct_variables(code_solution)
+        workflow.add_node("react", self.react)
+        workflow.add_node("generate_code", self.generate_code)
+        workflow.add_node("execute_code", self.execute_code)
+        workflow.add_node("analyze_error", self.analyze_error)
 
-        workflow.add_node("check_code", self.code_check)
+        workflow.add_edge("react", "generate_code")
+        workflow.add_edge("generate_code", "execute_code")
+        workflow.add_edge("execute_code", "react")
+        workflow.add_edge("analyze_error", "react")
 
-        workflow.add_edge(START, "generate")
-        workflow.add_edge("generate", "check_code")
-        workflow.add_edge("reset_procedure", "generate")
-        # workflow.add_edge("extract_var_ast", "check_and_correct_variables")
-        # workflow.add_edge("check_and_correct_variables", "check_code")
+        workflow.set_entry_point("react")
+
         workflow.add_conditional_edges(
-            "check_code",
-            self.decide_to_finish,
-            {"end": END, "generate": "generate", "reset_procedure": "reset_procedure"},
+            "react",
+            lambda x: x.action,
+            {
+                "GenerateCode": "generate_code",
+                "ExecuteCode": "execute_code",
+                "AnalyzeError": "analyze_error",
+                "Finish": END,
+            }
         )
 
         return workflow.compile()
 
-    def reflect(self, state: CodeGraphState):
-        """
-        Reflect on errors
-
-        Args:
-            state (dict): The current graph state
-
-        Returns:
-            state (dict): New key added to state, generation
-        """
-
-        logger.info("---REFLECTING ON ERRORS---")
-
-        # State
-        messages = state["messages"]
-        iterations = state["iterations"]
-        code_solution = state["generation"]
-
-        # Prompt reflection
-
-        # Add reflection
-        kaggle_state = state["kaggle_state"]
-
-        try:
-            reflections = self.code_gen_chain.invoke(
-                {
-                    "problem_description": kaggle_state.problem_description,
-                    "modelInfo": kaggle_state.modelInfo,
-                    "planned_tasks": kaggle_state.planned_tasks,
-                    "evaluation_metric": kaggle_state.evaluation_metric,
-                    "messages": state["messages"],
-                    "current_task": str(kaggle_state.enhanced_tasks[kaggle_state.index]),
-                    "format_instructions": self.format_instructions,
-                    "previous_tasks": kaggle_state.get_task_results(),
-                },
-            )
-            messages += [("assistant", f"Here are reflections on the error: {reflections}")]
-            logger.info("Reflection on errors completed successfully.")
-            return {
-                "generation": code_solution,
-                "messages": messages,
-                "iterations": iterations,
-            }
-        except Exception as e:
-            logger.error(f"Error during reflection: {e}", exc_info=True)
-            return state  # Return current state if reflection fails
-
-    def __reset_procedure(self, state: CodeGraphState):
-        kaggle_state = state["kaggle_state"]
-        task_codes_results = kaggle_state.task_codes_results
-
-        new_task_codes = []
-        self.nb_executor.reset()
-        for t, c, r in task_codes_results:
-            try:
-                new_result = self.nb_executor.test_and_execute(str(c))
-                new_task_codes.append((t, c, exec2s(new_result)))
-            except Exception as e:
-                raise e
-
-        kaggle_state.task_codes_results = new_task_codes
-        self.nb_executor.is_restarted = False
-        return {"error": "no", "kaggle_state": kaggle_state}
-    def _cp_files(self, state: CodeGraphState):
-        # self.dataset_path = "./ongoing/train.csv"
-        # self.test_dataset_path = "./ongoing/test.csv"
-
-        with open(state.dataset_path,'rb') as f:
-            env_var = self.nb_executor.upload_file_env(f)
-        with open(state.test_dataset_path,'rb') as f:
-            env_var = self.nb_executor.upload_file_env(f)
-        
     def __call__(self, state: KaggleProblemState):
         initial_state = {
             "kaggle_state": state,
             "iterations": 0,
-            "generation": GeneratedCode(imports="", code="", variables={}, summary=""),
+            "generation": GeneratedCode(imports="", code="", variables={}),
             "messages": [],
         }
-        task_codes = state.task_codes_results
-        if self.uploaded==False:
+
+        if not self.uploaded:
             self._cp_files(state)
-            self.uploaded=True
+            self.uploaded = True
+            self.add_initial_data_to_memory(state)
+
         result = self.workflow.invoke(initial_state, config=self.config)
 
-        # print( str(result.get("result", "nothing")))
+        task_codes = state.task_codes_results
         task_codes.append(
             (
                 state.enhanced_tasks[state.index],
@@ -402,8 +306,22 @@ Error name {remove_color(cc(str(e.traceback)))}
                 str(result.get("result", "")),
             )
         )
+
         return {
             "task_codes_results": task_codes,
-            "summary": result["generation"].summary,
-            # "variables": result["generation"].variables,
         }
+
+    def _cp_files(self, state: KaggleProblemState):
+        # self.dataset_path = "./ongoing/train.csv"
+        # self.test_dataset_path = "./ongoing/test.csv"
+
+        with open(state.dataset_path, "rb") as f:
+            self.memory_agent.add_to_short_term_memory(
+                f"{{dataset_path :  { state.dataset_path} }}"
+            )
+            env_var = self.nb_executor.upload_file_env(f)
+        with open(state.test_dataset_path, "rb") as f:
+            self.memory_agent.add_to_short_term_memory(
+                f"{{test_dataset_path :  { state.test_dataset_path} }}"
+            )
+            env_var = self.nb_executor.upload_file_env(f)

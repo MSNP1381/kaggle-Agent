@@ -105,7 +105,7 @@ The Enhancer's output is a refined, context-aware task description that serves a
 
 ### 4.5 Replanner
 
-Currently under development, the Replanner will:
+Currently under development, the Re-planner will:
 
 - Analyze feedback from executed steps
 - Adjust the overall plan as needed

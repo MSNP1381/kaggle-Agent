@@ -21,6 +21,7 @@ import kaggle
 from submission.submission import SubmissionNode  # Import the new SubmissionNode
 from di_container import create_injector
 
+
 class KaggleProblemSolver:
     @inject
     def __init__(
@@ -31,7 +32,7 @@ class KaggleProblemSolver:
         nb_executor: JupyterExecutor,
         scraper: ScrapeKaggle,
         planner: KaggleProblemPlanner,
-        re_planner: KaggleProblemRePlanner,
+        # re_planner: KaggleProblemRePlanner,
         enhancer: KaggleTaskEnhancer,
         data_utils: DataUtils,
         code_agent: CodeGenerationAgent,
@@ -44,7 +45,7 @@ class KaggleProblemSolver:
         self.nb_executor = nb_executor
         self.scraper = scraper
         self.planner = planner
-        self.re_planner = re_planner
+        # self.re_planner = re_planner
         self.enhancer = enhancer
         self.data_utils = data_utils
         self.code_agent = code_agent
@@ -54,9 +55,9 @@ class KaggleProblemSolver:
     def _init_state(self, url: str):
         self.dataset_path = "./ongoing/train.csv"
         self.test_dataset_path = "./ongoing/test.csv"
-        with open(self.dataset_path,'rb') as f:
+        with open(self.dataset_path, "rb") as f:
             env_var = self.nb_executor.upload_file_env(f)
-        with open(self.test_dataset_path,'rb') as f:
+        with open(self.test_dataset_path, "rb") as f:
             env_var = self.nb_executor.upload_file_env(f)
 
         return KaggleProblemState(
@@ -97,7 +98,9 @@ class KaggleProblemSolver:
         # graph_builder.add_node("executor", self.executor)
         graph_builder.add_node("enhancer", self.enhancer)
         graph_builder.add_node("data_utils", self.data_utils)
-        graph_builder.add_node("submission_node", self.submission_node)  # Add the SubmissionNode
+        graph_builder.add_node(
+            "submission_node", self.submission_node
+        )  # Add the SubmissionNode
 
         graph_builder.add_edge(START, "scraper")
         graph_builder.add_edge("scraper", "data_utils")
@@ -109,7 +112,9 @@ class KaggleProblemSolver:
         # graph_builder.add_edge("code_agent", "en")  # Connect code_agent to submission_node
         # graph_builder.add_edge("submission_node", "executor")
         graph_builder.add_conditional_edges(
-            "code_agent", self.is_plan_done, path_map={"submission_node": 'submission_node', "enhancer": "enhancer"}
+            "code_agent",
+            self.is_plan_done,
+            path_map={"submission_node": "submission_node", "enhancer": "enhancer"},
         )
         graph_builder.add_edge("submission_node", END)
 
@@ -138,14 +143,15 @@ class KaggleProblemSolver:
 
         # Retrieve the submission result
         submissions = kaggle.api.competition_submissions(competition)
-        latest_submission = max(submissions, key=lambda x: x['date'])
+        latest_submission = max(submissions, key=lambda x: x["date"])
         print(f"Latest submission result: {latest_submission}")
 
         return latest_submission
 
+
 # Example usage
 if __name__ == "__main__":
-    print(".env loaded:", load_dotenv())
+    print(".env loaded:", load_dotenv(override=True))
 
     parser = argparse.ArgumentParser("kaggle_scraper")
     parser.add_argument(

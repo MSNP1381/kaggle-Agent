@@ -1,13 +1,13 @@
 import urllib.parse
-import base64        
+import base64
 from queue import Empty
-import time,json
+import time, json
 from typing import IO, List
 from jupyter_client import KernelManager
 from utils import CellResult, NotebookExecutorInterface, CellError
 from utils import CellResult, NotebookExecutorInterface, CellError
 from datetime import datetime
-import os,requests
+import os, requests
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 from nbformat.v4 import new_notebook, new_code_cell, new_output
@@ -132,12 +132,12 @@ class JupyterExecutor(NotebookExecutorInterface):
 
         return results
 
-    def upload_file_env(self,myfile:IO, resourceDstPath="~/") -> str:
+    def upload_file_env(self, myfile: IO, resourceDstPath="~/") -> str:
         """
         Uploads File to Jupyter Notebook Server
         ----------------------------------------
         :param token:
-            The authorization token issued by Jupyter for authentication 
+            The authorization token issued by Jupyter for authentication
             (enabled by default as of version 4.3.0)
         :param filePath:
             The file path to the local content to be uploaded
@@ -151,24 +151,25 @@ class JupyterExecutor(NotebookExecutorInterface):
 
         :return: server response
         """
-        return 
-        name= os.path.basename(myfile.name)
+        return
+        name = os.path.basename(myfile.name)
         dstPath = urllib.parse.quote(name)
         print(dstPath)
-        dstUrl = f'{self.url}/api/contents/{dstPath}'
+        dstUrl = f"{self.url}/api/contents/{dstPath}"
         # headers = {'Authorization': f'token {self.token}'}
         headers = None
 
-    
         data = myfile.read()
-        b64data = base64.b64encode(data).decode('utf-8')
-        body = json.dumps({
-            'content': b64data,
-            'name': name,
-            'path': resourceDstPath,
-            'format': 'base64',
-            'type': 'file'
-        })
+        b64data = base64.b64encode(data).decode("utf-8")
+        body = json.dumps(
+            {
+                "content": b64data,
+                "name": name,
+                "path": resourceDstPath,
+                "format": "base64",
+                "type": "file",
+            }
+        )
         response = requests.put(dstUrl, data=body, headers=headers, verify=True)
         print(response.text)
         return response
