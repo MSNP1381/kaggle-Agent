@@ -1,15 +1,11 @@
-import urllib.parse
-import base64
-from queue import Empty
-import time, json
-from typing import IO, List
+import shutil
+import time
+from typing import List
 from jupyter_client import KernelManager
 from utils import CellResult, NotebookExecutorInterface, CellError
-from utils import CellResult, NotebookExecutorInterface, CellError
 from datetime import datetime
-import os, requests
+import os
 import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
 from nbformat.v4 import new_notebook, new_code_cell, new_output
 
 
@@ -20,7 +16,7 @@ class JupyterExecutor(NotebookExecutorInterface):
         self.token = token
         self.kernel()
         self.is_restarted = False
-        self.notebook_path = self.create_notebook("my_notebook.ipynb", "./notebooks")
+        self.notebook_path = self.create_nb("my_notebook.ipynb", "./notebooks")
 
     def kernel(self):
         self.km = KernelManager(url=self.url, token=self.token)
@@ -52,14 +48,16 @@ class JupyterExecutor(NotebookExecutorInterface):
 
     def actions_on_error(self, code, cell_outputs):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
         error_notebook_path = os.path.join(
             os.path.dirname(self.notebook_path),
             "error_" + timestamp + "_" + os.path.basename(self.notebook_path),
         )
-        os.rename(self.notebook_path, error_notebook_path)
+        shutil.copy(self.notebook_path, error_notebook_path)
         self.add_to_notebook(code, cell_outputs, error_notebook_path)
 
-        self.recreate_notebook()
+    def clean_code(self, code):
+        return code.strip().replace("\\n", "\n")
 
     def test_and_execute(
         self,
@@ -70,7 +68,7 @@ class JupyterExecutor(NotebookExecutorInterface):
         if self.kc is None:
             self.restart_kernel()
 
-        results = []
+        results = None
         errors = []
 
         msg_id = self.kc.execute(code)
@@ -82,7 +80,7 @@ class JupyterExecutor(NotebookExecutorInterface):
                 if msg["parent_header"].get("msg_id") == msg_id:
                     if msg["msg_type"] == "stream":
                         output = msg["content"]["text"]
-                        results.append(CellResult(output))
+                        results = CellResult(output)
                         cell_outputs.append(
                             new_output(
                                 output_type="stream",
@@ -128,54 +126,15 @@ class JupyterExecutor(NotebookExecutorInterface):
         if errors:
             self.actions_on_error(code, cell_outputs)
             raise errors[0]
-        self.add_to_notebook(code, cell_outputs)
-
+        self.add_to_notebook(
+            code,
+            cell_outputs,
+        )
+        self.verify_notebook()  # Add this line
+        print(results)
         return results
 
-    def upload_file_env(self, myfile: IO, resourceDstPath="~/") -> str:
-        """
-        Uploads File to Jupyter Notebook Server
-        ----------------------------------------
-        :param token:
-            The authorization token issued by Jupyter for authentication
-            (enabled by default as of version 4.3.0)
-        :param filePath:
-            The file path to the local content to be uploaded
-
-        :param resourceDstPath:
-            The path where resource should be placed.
-            The destination directory must exist.
-
-        :param jupyterUrl:
-            The url to the jupyter server. Default value is typical localhost installation.
-
-        :return: server response
-        """
-        return
-        name = os.path.basename(myfile.name)
-        dstPath = urllib.parse.quote(name)
-        print(dstPath)
-        dstUrl = f"{self.url}/api/contents/{dstPath}"
-        # headers = {'Authorization': f'token {self.token}'}
-        headers = None
-
-        data = myfile.read()
-        b64data = base64.b64encode(data).decode("utf-8")
-        body = json.dumps(
-            {
-                "content": b64data,
-                "name": name,
-                "path": resourceDstPath,
-                "format": "base64",
-                "type": "file",
-            }
-        )
-        response = requests.put(dstUrl, data=body, headers=headers, verify=True)
-        print(response.text)
-        return response
-
     def add_to_notebook(self, code, outputs, notebook_path=None):
-        """Saves the current IPython kernel state to an .ipynb file, including cell outputs."""
         if notebook_path is None:
             notebook_path = self.notebook_path
 
@@ -189,19 +148,19 @@ class JupyterExecutor(NotebookExecutorInterface):
         with open(notebook_path, "w", encoding="utf-8") as f:
             nbformat.write(nb, f)
 
-        print(f"Notebook with outputs saved to {notebook_path}")
+        print(f"Notebook saved. Total cells: {len(nb.cells)}")
 
-    def recreate_notebook(
-        self,
-    ):
-        if not os.path.exists(self.notebook_path):
-            # Create a new notebook
-            nb = new_notebook()
-            with open(self.notebook_path, "w", encoding="utf-8") as f:
-                nbformat.write(nb, f)
+    def verify_notebook(self, notebook_path=None):
+        if notebook_path is None:
+            notebook_path = self.notebook_path
 
-    def create_notebook(self, notebook_name: str, notebook_dir: str = "./notebooks"):
+        with open(notebook_path, "r", encoding="utf-8") as f:
+            nb = nbformat.read(f, as_version=4)
 
+        print(f"Verifying notebook: {notebook_path}")
+        print(f"Total cells: {len(nb.cells)}")
+
+    def create_nb(self, notebook_name: str, notebook_dir: str = "./notebooks"):
         # Create a subdirectory with the current timestamp
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         notebook_dir = os.path.join(notebook_dir, timestamp)
@@ -212,7 +171,7 @@ class JupyterExecutor(NotebookExecutorInterface):
             # Create a new notebook
             nb = new_notebook()
             with open(notebook_path, "w", encoding="utf-8") as f:
-                nbformat.write(nb, f)
+                nbformat.write(nb, f, 4)
         return notebook_path
 
 

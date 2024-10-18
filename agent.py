@@ -1,19 +1,20 @@
 #!/home/msnp/miniconda3/envs/kaggle_agent/bin/python
 import argparse
 import time
-import httpx
 from injector import inject
 from langgraph.graph import StateGraph, START, END
 from pymongo import MongoClient
-from code_generation_agent import CodeGenerationAgent
+from code_manager import KaggleCodeManager
 from kaggle_scraper import ScrapeKaggle
 from executors.nbexecutor_jupyter import JupyterExecutor
 from persistence.mongo import MongoDBSaver
+
+# from planner_agent import KaggleProblemPlanner
 from planner_agent import KaggleProblemPlanner
-from replanner import KaggleProblemRePlanner
 from dotenv import load_dotenv
 import os
-from langfuse.callback import CallbackHandler
+
+# from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
 from data_utils import DataUtils
@@ -27,38 +28,34 @@ class KaggleProblemSolver:
     def __init__(
         self,
         config: dict,
-        proxy: httpx.Client,
+        # proxy: httpx.Client,
         client: MongoClient,
         nb_executor: JupyterExecutor,
         scraper: ScrapeKaggle,
         planner: KaggleProblemPlanner,
         # re_planner: KaggleProblemRePlanner,
+        code_manager: KaggleCodeManager,
         enhancer: KaggleTaskEnhancer,
         data_utils: DataUtils,
-        code_agent: CodeGenerationAgent,
-        handler: CallbackHandler,
+        # handler: CallbackHandler,
         submission_node: SubmissionNode,  # Inject the SubmissionNode
     ):
         self.config = config
-        self.proxy = proxy
+        # self.proxy = proxy
         self.client = client
         self.nb_executor = nb_executor
         self.scraper = scraper
         self.planner = planner
         # self.re_planner = re_planner
+        self.code_manager = code_manager
         self.enhancer = enhancer
         self.data_utils = data_utils
-        self.code_agent = code_agent
-        self.handler = handler
+        # self.handler = handler
         self.submission_node = submission_node
 
     def _init_state(self, url: str):
         self.dataset_path = "./ongoing/train.csv"
         self.test_dataset_path = "./ongoing/test.csv"
-        with open(self.dataset_path, "rb") as f:
-            env_var = self.nb_executor.upload_file_env(f)
-        with open(self.test_dataset_path, "rb") as f:
-            env_var = self.nb_executor.upload_file_env(f)
 
         return KaggleProblemState(
             **{
@@ -92,7 +89,7 @@ class KaggleProblemSolver:
     def compile(self, checkpointer):
         graph_builder = StateGraph(KaggleProblemState)
         graph_builder.add_node("scraper", self.scraper)
-        graph_builder.add_node("code_agent", self.code_agent)
+        graph_builder.add_node("code_manager", self.code_manager)
         graph_builder.add_node("planner", self.planner)
         # graph_builder.add_node("re_planner", self.re_planner)
         # graph_builder.add_node("executor", self.executor)
@@ -108,11 +105,11 @@ class KaggleProblemSolver:
         graph_builder.add_edge("planner", "enhancer")
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
 
-        graph_builder.add_edge("enhancer", "code_agent")
+        graph_builder.add_edge("enhancer", "code_manager")
         # graph_builder.add_edge("code_agent", "en")  # Connect code_agent to submission_node
         # graph_builder.add_edge("submission_node", "executor")
         graph_builder.add_conditional_edges(
-            "code_agent",
+            "code_manager",
             self.is_plan_done,
             path_map={"submission_node": "submission_node", "enhancer": "enhancer"},
         )
@@ -171,12 +168,12 @@ if __name__ == "__main__":
     # proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
     proxy = None
     session_id = f"session-{int(time.time())}"
-    langfuse_handler = CallbackHandler(
-        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-        secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-        host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
-        session_id=session_id,
-    )
+    # langfuse_handler = CallbackHandler(
+    #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    #     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    #     host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+    #     session_id=session_id,
+    # )
 
     client = MongoClient(
         host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))

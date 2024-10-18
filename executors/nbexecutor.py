@@ -1,6 +1,5 @@
 import time
 import nbformat
-from nbconvert import HTMLExporter
 from nbconvert.preprocessors import ExecutePreprocessor
 import copy
 from nbconvert.preprocessors import CellExecutionError
@@ -21,7 +20,6 @@ class NBExecutor:
         return self.nb_name
 
     def add_nb_code_block(self, code):
-
         new_cell = nbformat.v4.new_code_cell(code)
         self.nb.cells.append(new_cell)
         with open(self.nb_name, "w") as f:
@@ -56,7 +54,7 @@ class NBExecutor:
         new_cell = nbformat.v4.new_code_cell(new_code)
         nb_.cells.append(new_cell)
         try:
-            out = ep.preprocess(
+            ep.preprocess(
                 nb_,
                 {
                     "metadata": {
@@ -86,7 +84,6 @@ class NBExecutor:
         # return True
 
     def process_cell_output(self, cell):
-
         if cell.cell_type != "code" or not cell.outputs:
             return None
 

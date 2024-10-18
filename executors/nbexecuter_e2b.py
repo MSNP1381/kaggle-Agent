@@ -1,4 +1,4 @@
-from typing import IO, List
+from typing import List
 from utils import CellResult, NotebookExecutorInterface, CellError
 
 from e2b_code_interpreter import CodeInterpreter
@@ -38,10 +38,3 @@ class E2B_executor(NotebookExecutorInterface):
             e = CellError(executiuon_result.error)
             raise e
         return [CellResult(i) for i in executiuon_result.results]
-
-    def upload_file_env(self, file: IO, env_var: str = None):
-        if not env_var:
-            env_var = "MY_FILE"
-        self.executor.upload_file(file)
-        self.executor.env_vars[env_var] = "/home/user/" + file.name
-        return env_var

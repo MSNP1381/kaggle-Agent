@@ -1,4 +1,3 @@
-from pprint import pformat, pprint
 from psycopg_pool import ConnectionPool
 import streamlit as st
 import time
@@ -17,7 +16,6 @@ if "running" not in st.session_state:
 
 
 def transform(event, use_log):
-
     if use_log:
         p = event
         k = list(p)[0]
@@ -83,7 +81,7 @@ def start(use_langfuse=False, use_pg_persistence=True):
         st.session_state.use_log = True
 
         st.title("LangGraph Kaggle Agent")
-        load_dotenv()
+        load_dotenv(override=True)
 
         proxy = httpx.Client(proxies=os.getenv("HTTP_PROXY_URL"))
         config = {

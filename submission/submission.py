@@ -3,7 +3,6 @@ from states.main import KaggleProblemState
 
 
 class SubmissionNode:
-
     def __call__(self, state: KaggleProblemState, config: dict):
         competition = config.get("competition")
         submission_file = config.get("submission_file")

@@ -1,8 +1,6 @@
-import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from dotenv import load_dotenv
-import httpx
 import pandas as pd
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
@@ -10,6 +8,7 @@ from pydantic import BaseModel, Field
 from langchain.output_parsers import PydanticOutputParser
 from prompts.utils import DATASET_ANALYSIS_PROMPT
 from states.main import KaggleProblemState
+from pymongo import MongoClient
 
 
 class DatasetAnalysis(BaseModel):
@@ -19,18 +18,18 @@ class DatasetAnalysis(BaseModel):
     qualitative_analysis: str = Field(
         description="Detailed qualitative analysis of the dataset"
     )
-    feature_recommendations: Optional[List[str]] = Field(
-        description="Suggested feature engineering and preprocessing steps"
-    )
 
 
 class DataUtils:
     def __init__(
-        self, config: Dict[str, Any], proxy: Optional[httpx.Client], llm: ChatOpenAI
+        self,
+        config: Dict[str, Any],
+        llm: ChatOpenAI,
+        mongo_client: Optional[MongoClient] = None,
     ):
         self.config = config
-        self.proxy = proxy
         self.llm = llm
+        self.mongo_client = mongo_client
         self.dataset_analysis_prompt = ChatPromptTemplate.from_messages(
             [("system", DATASET_ANALYSIS_PROMPT)]
         )
@@ -40,7 +39,7 @@ class DataUtils:
         self, dataset: pd.DataFrame, dataset_info: str
     ) -> DatasetAnalysis:
         data_initial_info = self._generate_dataset_overview(dataset)
-        dataset_head = dataset.head().to_string()
+        dataset_head = dataset.head().to_markdown()
 
         format_instructions = self.output_parser.get_format_instructions()
         response = (
@@ -68,20 +67,39 @@ class DataUtils:
         return "\n".join(overview)
 
     def __call__(self, state: KaggleProblemState) -> Dict[str, str]:
+        if self.mongo_client:
+            db = self.mongo_client.get_database("challenge_data")
+            collection = db.get_collection("data_utils_results")
+            if not state.challenge_url.endswith("/"):
+                state.challenge_url += "/"
+            data = collection.find_one({"challenge_url": state.challenge_url})
+            if data:
+                return {k: v for k, v in data.items() if k != "_id"}
+
         dataset = self._load_dataset(state.dataset_path)
         if dataset is None:
             return {"error": "Failed to load dataset"}
         result = self.analyze_dataset(dataset, state.problem_description)
         analysis_result = self._generate_dataset_overview(dataset)
 
-        return {
+        output = {
+            "challenge_url": state.challenge_url,
             "dataset_info": analysis_result,
             "quantitative_analysis": result.quantitative_analysis,
             "qualitative_analysis": result.qualitative_analysis,
-            "feature_recommendations": result.feature_recommendations,
         }
 
+        # Write result back to MongoDB if available
+        if self.mongo_client:
+            try:
+                collection.insert_one(output)
+            except Exception as e:
+                print(f"Error writing result to MongoDB: {str(e)}")
+
+        return output
+
     def _load_dataset(self, dataset_path: str) -> Optional[pd.DataFrame]:
+        # Fallback to loading from CSV
         try:
             return pd.read_csv(dataset_path)
         except FileNotFoundError:
@@ -95,14 +113,14 @@ class DataUtils:
 
 def main():
     load_dotenv(override=True)
-    proxy_url = os.getenv("HTTP_PROXY_URL")
-    proxy = httpx.Client(proxies=proxy_url) if proxy_url else None
+    # proxy_url = os.getenv("HTTP_PROXY_URL")
+    # proxy = httpx.Client(proxies=proxy_url) if proxy_url else None
 
     try:
         llm = ChatOpenAI(
             base_url=os.getenv("OPENAI_API_BASE_URL", "https://api.openai.com/v1"),
             model=os.getenv("OPENAI_MODEL", "gpt-4"),
-            http_client=proxy,
+            # http_client=proxy,
             temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.0")),
             api_key=os.getenv("OPENAI_API_KEY"),
         )
@@ -113,7 +131,8 @@ def main():
     config = {
         "additional_config_key": "value"  # Replace with actual configuration if needed
     }
-    data_utils = DataUtils(config=config, proxy=proxy, llm=llm)
+    mongo_uri = os.getenv("MONGO_URI")
+    data_utils = DataUtils(config=config, llm=llm, mongo_uri=mongo_uri)
 
     dataset_path = "./house_prices.csv"
     problem_description = """
@@ -136,9 +155,6 @@ def main():
         print(result["dataset_info"])
     except Exception as e:
         print(f"An error occurred while running DataUtils: {e}")
-    finally:
-        if proxy:
-            proxy.close()
 
 
 if __name__ == "__main__":

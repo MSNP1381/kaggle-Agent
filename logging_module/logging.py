@@ -29,7 +29,6 @@
 #         log_it()
 #         print(f"Calling method: {method_name} with args: {args} and kwargs: {kwargs}")
 
-from langchain_core.callbacks import BaseCallbackHandler
 
 # from langchain_core.callbacks.manager import
 

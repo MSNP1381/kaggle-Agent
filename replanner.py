@@ -1,4 +1,3 @@
-import httpx
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.output_parsers import PydanticOutputParser
@@ -27,7 +26,7 @@ class RePlanDecision(BaseModel):
 
 
 class KaggleProblemRePlanner:
-    def __init__(self, config, proxy, llm: ChatOpenAI, memory_agent: MemoryAgent):
+    def __init__(self, config, llm: ChatOpenAI, memory_agent: MemoryAgent):
         self.config = config
         self.llm = llm
         self.output_parser = PydanticOutputParser(pydantic_object=RePlanDecision)
@@ -83,9 +82,7 @@ Based on the above information, should the project plan be adjusted? If so, plea
 
     def re_plan(self, state: KaggleProblemState) -> List[str]:
         # Get relevant context from memory
-        relevant_context = self.memory_agent.get_relevant_context(
-            state.problem_description
-        )
+        relevant_context = self.memory_agent.ask(state.problem_description)
 
         response = self.llm.invoke(
             self.re_plan_prompt.format_messages(

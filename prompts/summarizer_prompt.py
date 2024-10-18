@@ -8,7 +8,8 @@ CHALLENGE_DESCRIPTION_PROMPT = [
 3. Any unique aspects or constraints of the challenge
 4. Key information that would be relevant for developing a solution
 
-Explain your reasoning step-by-step, ensuring that your summary captures all crucial details for a data scientist to understand the challenge's core requirements.""",
+**write your output in just one paragraph.**
+""",
     ),
     ("user", "Challenge description:\n\n```markdown\n{{text}}\n```"),
 ]
@@ -33,17 +34,14 @@ Explain your reasoning step-by-step, ensuring that your explanation provides cle
 CHALLENGE_DATA_PROMPT = [
     (
         "system",
-        """You are an expert AI assistant specializing in Kaggle machine learning competitions. Your task is to describe the data provided for a Kaggle competition. Provide a detailed description that includes:
+        """
+You are an expert AI assistant specializing in Kaggle machine learning competitions. Your task is to describe the data provided for a Kaggle competition:
 
-1. The structure of the dataset (e.g., number of files, format)
-2. Key features and their potential importance
-3. The target variable (if applicable) and how it relates to the problem
-4. Any notable characteristics of the data (e.g., imbalances, missing values)
-5. Potential challenges or unique aspects of working with this dataset
+output the undrestanding of the data columns and the target column from provided text and add an explanation columns.
+also output the target column and its explanation.
 
 If there isn't a clear target column, explain how the evaluation might be conducted based on the provided data.
-
-Explain your reasoning step-by-step, ensuring that your description gives a comprehensive overview of the dataset and its relevance to the challenge.""",
+""",
     ),
     ("user", "Challenge data description:\n\n```markdown\n{{text}}\n```"),
 ]
@@ -73,11 +71,6 @@ In your analysis:
    - Discuss any potential data quality issues or inconsistencies.
    - Analyze the relationships between features and the target variable (if applicable).
 
-3. For feature recommendations:
-   - Suggest specific feature engineering techniques that could improve model performance.
-   - Recommend preprocessing steps to handle missing data, outliers, or scaling issues.
-   - Propose any additional features that could be created from the existing data.
-   - Consider domain-specific transformations or encodings that might be relevant.
 
 Ensure your analysis is thorough, insightful, and directly applicable to the machine learning task at hand. Your recommendations should be actionable and tailored to the specific challenge and dataset characteristics.
 """

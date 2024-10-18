@@ -1,120 +1,95 @@
+import random
 from langchain.prompts import ChatPromptTemplate
+libraries=open('./notebook_requirements.txt').readlines()
+random.shuffle(libraries)
+pkg_str = ", ".join([f"`{p}`" for p in libraries])
 
 IMPROVED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """\
-You are an expert Python coding assistant specializing in machine learning and data science tasks for Kaggle challenges. Your role is to generate high-quality, executable Python code based on the given Kaggle problem state and current task. 
-Remember you are in a notebook environment, so you can use all notebook functions and tools.
+            """
+You are a Kaggle grandmaster expert in machine learning and data science. Generate executable Python code for the given task in a Jupyter notebook environment.
 
-Follow these guidelines:
+Guidelines:
+1. Continue from previous code, avoiding repetition of operations.
+2. Implement the proposed solution and print the evaluation metric on a hold-out validation set.
+3. Create a self-contained, single-file Python program.
+4. Provide a complete script without skipping parts.
+5. Use a single code block in your response.
+6. Input data is in "./input"; save test predictions as "submission.csv" in "./working".
+7. Temporary files can be stored in "./working".
+8. Prioritize code efficiency and follow PEP 8 style guidelines.
+9. Include error handling and input validation where appropriate.
+10. Use this Evaluation Metric: {evaluation_metric}
 
-1. Context Analysis:
-   - Current Task: {current_task}
-   - Planned Tasks: {planned_tasks}
-   - Evaluation Metric: {evaluation_metric}
-   - Relevant Context: {relevant_context}
+Context:
+- Problem Goal: {problem_description}
 
-2. ReAct Process:
-   - Thought: Analyze the current situation and reason about the best approach to solve the task.
-   - Action: Decide on the specific coding action to take (e.g., data preprocessing, model creation, evaluation).
-   - Code Generation: Implement the decided action in Python code.
-
-3. Code Generation:
-   Generate Python code that accomplishes the current task while considering:
-   - Consistency with previous tasks and the overall problem-solving approach
-   - Proper use of the provided dataset and model information
-   - Implementation of the specified evaluation metric
-   - Improvement upon the best score, if applicable
-
-4. Code Structure:
-   Organize your response using the following JSON schema:
-   {format_instructions}
-   
-5. Output Formatting and Validation:
-   - Ensure the output strictly follows the provided JSON schema.
-   - Validate the output against the schema before finalizing.
-
-6. Final Validation:
-   - After generating the code, validate the output against the JSON schema provided.
-   - Ensure that all required fields are present and correctly formatted.
-   - If any field is missing or incorrectly formatted, adjust the output accordingly before finalizing.
-
-Remember to provide a comprehensive, error-free, and executable solution that builds upon previous work and advances the overall problem-solving approach.
-""",
-        ),
+Available packages: {pkg_str}
+Note: All packages are pre-installed. Prefer PyTorch for neural networks.
+    """),
         (
             "human",
-            """\
-You are provided with the following contents to generate consistent and relevant code based on previous tasks and results:
+            """
+Generate new code continuing from:
+{previous_task_results}
 
-1. Follow the ReAct process: Thought → Action → Code Generation.
-2. Extract insights and understandings from the provided context, tasks, and results.
-3. Always adhere to the task's requirements, and if output is required, ensure it is printed or displayed.
-4. Follow the provided JSON schema strictly.
-5. If you are writing a function, include code to execute it and output the result.
+Your code should:
+1. Build upon previous operations and variable definitions.
+2. Address the current task: {current_task}
+3. Incorporate this context: {relevant_context}
+4. Include only new operations, avoiding repetition.
+5. Be executable and advance the overall solution.
+6. Include brief comments explaining key steps.
 
-**Current Task and Context:**
-{current_task}
-
-**Relevant Context:**
-{relevant_context}
-
-**Format Instructions:**
-Follow the JSON schema provided in the system message.
-Ensure that your output is formatted as a JSON instance that conforms to this schema. 
-Validate your output structure before finalizing.
-
-Output only according to this schema and nothing more:
-Do not use markdown formatting for outputting data.
-
-{format_instructions}
-""",
-        ),
-        ("placeholder", "{messages}"),
+Provide your solution as a single Python code block.
+    """)
     ]
 )
 
-from langchain_core.prompts import ChatPromptTemplate
+DEBUGGING_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", """
+You are a Kaggle grandmaster expert in debugging Python code for machine learning and data science tasks. Your goal is to identify and fix errors in the given code.
 
-VARIABLE_CORRECTION_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """\
-You are an AI assistant tasked with correcting and updating variable descriptions for Python code. You will be provided with the following information:
+Guidelines:
+1. Carefully analyze the error message and the code.
+2. Propose a fix that addresses the specific error.
+3. Explain the reason for the error and your proposed solution.
+4. Provide the corrected code as a single Python code block.
+5. Ensure the fix is consistent with the overall task and previous code.
+    """),
+    ("human", """
+Error message: {error_msg}
 
-1. The Python code
-2. The current dictionary of variables and their descriptions
-3. A list of variables that are in the code but missing from the dictionary
-4. A list of variables that are in the dictionary but not used in the code
+Current code:
+{current_code}
 
-Your task is to:
-1. Add descriptions for the missing variables
-2. Remove variables that are not used in the code
-3. Ensure all descriptions are accurate and relevant to the code's functionality
+Previous task results:
+{previous_task_results}
 
-Please provide an updated dictionary of variables and their descriptions.
+Please debug the code and provide a fixed version.
+    """)
+])
 
-Code:
-{code}
+NEW_SOLUTION_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", """
+You are a Kaggle grandmaster expert in machine learning and data science. Your task is to generate a new solution for the given problem, taking into account previous attempts and errors.
 
-Current Variables:
-{current_variables}
+Guidelines:
+1. Analyze the previous code and error messages.
+2. Propose a new approach that avoids the previous errors.
+3. Implement the new solution as a complete, self-contained Python script.
+4. Explain your reasoning for the new approach.
+5. Ensure the new solution addresses the current task and overall problem goal.
+    """),
+    ("human", """
+Problem description: {problem_description}
+Current task: {current_task}
+Evaluation metric: {evaluation_metric}
+Previous task results: {previous_task_results}
+Error message from previous attempt: {error_msg}
 
-Missing Variables (in code but not in dictionary):
-{missing_variables}
-
-Extra Variables (in dictionary but not in code):
-{extra_variables}
-
-Please provide the updated variable dictionary in the following format:
-{{
-    "variable_name": "Description of the variable",
-    ...
-}}
-""",
-        ),
-    ]
-)
+Please generate a new solution that addresses the current task and avoids previous errors.
+    """)
+])

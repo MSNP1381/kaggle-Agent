@@ -1,17 +1,17 @@
 # di_container.py
 from injector import Injector, Module, singleton, provider
-import httpx
 from pymongo import MongoClient
 from langchain_openai import ChatOpenAI
+from code_manager import KaggleCodeManager
 from code_generation_agent import CodeGenerationAgent
 from kaggle_scraper import ScrapeKaggle
 from psycopg import Connection
 
 # from nbexecuter_e2b import E2B_executor, SandboxManager
 from executors.nbexecutor_jupyter import JupyterExecutor
-from planner_agent import KaggleProblemPlanner
 
 # from replanner import KaggleProblemRePlanner
+from planner_agent import KaggleProblemPlanner
 from task_enhancer import KaggleTaskEnhancer
 from data_utils import DataUtils
 import os
@@ -25,41 +25,26 @@ from states.memory import MemoryAgent  # Add this import
 
 
 class AppModule(Module):
-
     def __init__(self):
         self.server = None
 
     @singleton
     @provider
     def provide_config(self) -> dict:
-        session_id = f"session-{int(time.time())}"
+
         return {
             "configurable": {"thread_id": str(int(time.time()))},
             "recursion_limit": config_reader.getint(
                 "General", "recursion_limit", fallback=50
             ),
-            "callbacks": [
-                CallbackHandler(
-                    public_key=os.environ["LANGFUSE_PUBLIC_KEY"],
-                    secret_key=os.environ["LANGFUSE_SECRET_KEY"],
-                    host=os.getenv("LANGFUSE_HOST", "http://127.0.0.1:3000"),
-                    session_id=session_id,
-                )
-            ],
+            "callbacks": [CallbackHandler(session_id=f"session-{int(time.time())}")],
         }
 
     @singleton
     @provider
-    def provide_proxy(self) -> httpx.Client:
-        # return httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
-        return None
-
-    @singleton
-    @provider
     def provide_mongo_client(self) -> MongoClient:
-        return MongoClient(
-            host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
-        )
+        mongo_uri = f"mongodb://{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}"
+        return MongoClient(mongo_uri)
 
     @singleton
     @provider
@@ -70,11 +55,10 @@ class AppModule(Module):
 
     @singleton
     @provider
-    def provide_llm(self, proxy: httpx.Client) -> ChatOpenAI:
+    def provide_llm(self) -> ChatOpenAI:
         return ChatOpenAI(
             base_url=config_reader.get("API", "base_url"),
             model=config_reader.get("API", "model"),
-            http_client=proxy,
             temperature=config_reader.getfloat("API", "temperature"),
         )
 
@@ -99,9 +83,9 @@ class AppModule(Module):
     @singleton
     @provider
     def provide_planner(
-        self, config: dict, proxy: httpx.Client, llm: ChatOpenAI
+        self, config: dict, llm: ChatOpenAI, memory: MemoryAgent
     ) -> KaggleProblemPlanner:
-        return KaggleProblemPlanner(config, proxy, llm=llm)
+        return KaggleProblemPlanner(config, llm=llm, memory=memory)
 
     # @singleton
     # @provider
@@ -119,27 +103,27 @@ class AppModule(Module):
 
     @singleton
     @provider
-    def provide_memory_agent(self, llm: ChatOpenAI) -> MemoryAgent:
-        return MemoryAgent(llm=llm)
+    def provide_memory_agent(self, llm: ChatOpenAI, mongo: MongoClient) -> MemoryAgent:
+        return MemoryAgent(llm=llm, mongo=mongo)
 
     @singleton
     @provider
     def provide_data_utils(
-        self, config: dict, proxy: httpx.Client, llm: ChatOpenAI
+        self, config: dict, llm: ChatOpenAI, mongo_client: MongoClient
     ) -> DataUtils:
-        return DataUtils(config, proxy, llm)
+        return DataUtils(config, llm, mongo_client)
 
     @singleton
     @provider
     def provide_code_agent(
         self,
         config: dict,
-        proxy: httpx.Client,
+        llm: ChatOpenAI,
         nb_executor: JupyterExecutor,
         memory_agent: MemoryAgent,
     ) -> CodeGenerationAgent:
         return CodeGenerationAgent(
-            config, proxy=proxy, nb_executor=nb_executor, memory_agent=memory_agent
+            llm, config, nb_executor=nb_executor, memory_agent=memory_agent
         )
 
     @singleton
@@ -147,7 +131,13 @@ class AppModule(Module):
     def provide_submission_node(self) -> SubmissionNode:
         return SubmissionNode()
 
-
+    @singleton
+    @provider
+    def provide_code_manager(
+        self, code_gen_agent: CodeGenerationAgent
+    ) -> KaggleCodeManager:
+        code_agent = KaggleCodeManager(code_gen_agent)
+        return code_agent
 
 
 def create_injector():

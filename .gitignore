@@ -173,3 +173,14 @@ notebooks/*
 kaggle_challenges_data/*
 ongoing/*
 *.log
+input/*
+working/*
+*.csv
+*.json
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.pt
+*.pth
+*.tar

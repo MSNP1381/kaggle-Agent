@@ -5,7 +5,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 USER ${NB_UID}
 
-RUN python -m pip install numpy pandas matplotlib seaborn scipy scikit-learn xgboost lightgbm statsmodels plotly nltk opencv-python
+COPY ./notebook_requirements.txt ./requirements.txt
+
+RUN python -m pip install -r requirements.txt
 
 
 RUN python -m nltk.downloader punkt
@@ -25,4 +27,5 @@ CMD ["jupyter", "notebook", \
 
 EXPOSE 8888
 
-# WORKDIR "${HOME}"
+
+WORKDIR /home/jovyan/working

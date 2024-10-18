@@ -1,7 +1,10 @@
 import os
 import json
 import pprint
+import unittest
 import zipfile
+from unittest.mock import MagicMock
+
 import httpx
 from langchain_openai import ChatOpenAI
 from pymongo import MongoClient
@@ -15,10 +18,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain.output_parsers.fix import StrOutputParser
 from kaggle.api.kaggle_api_extended import KaggleApi
 from markdownify import markdownify
-from selenium.webdriver.chrome.service import Service
 from pydantic import BaseModel, Field
-from langchain.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser
 
 from prompts.summarizer_prompt import (
     CHALLENGE_DATA_PROMPT,
@@ -27,8 +27,6 @@ from prompts.summarizer_prompt import (
 )
 from states.main import KaggleProblemState
 
-import requests
-from bs4 import BeautifulSoup
 from kaggle.rest import ApiException
 
 
@@ -48,7 +46,7 @@ class ScrapeKaggle:
         client: MongoClient,
         config=None,
         proxy=None,
-        base_url="https://api.avalai.ir/v1",
+        base_url="https://api.avalapis.ir/v1",
     ):
         """
         Initializes the DataUtils with configuration and proxy settings.
@@ -92,11 +90,14 @@ class ScrapeKaggle:
         # try:
         data = self.scraped_data_collection.find_one({"challenge_url": challenge_url})
         if data:
-            return {
+            d = {
                 "description": data["scraped_data"]["description"],
                 "evaluation": data["scraped_data"]["evaluation"],
                 "data_details": data["scraped_data"]["data_details"],
             }
+            self.mongo_dict.update({"scraped_data": d})
+            return d
+
         options = webdriver.ChromeOptions()
         options.add_argument("--headless")
         proxy = os.getenv("HTTP_PROXY")
@@ -109,7 +110,6 @@ class ScrapeKaggle:
 
         options.proxy = p
         if proxy:
-
             options.add_argument(f"--proxy-server={proxy}")
 
         driver = webdriver.Chrome(
@@ -179,10 +179,6 @@ class ScrapeKaggle:
     ):
         self.dataset_path = "./ongoing/train.csv"
         self.test_dataset_path = "./ongoing/test.csv"
-        # with open(self.dataset_path) as f:
-        #     env_var = self.nb_executor.upload_file_env(f)
-        # with open(self.test_dataset_path) as f:
-        #     env_var = self.nb_executor.upload_file_env(f, env_var="TEST_FILE")
 
         return {
             # "file_env_var": env_var,
@@ -192,6 +188,7 @@ class ScrapeKaggle:
 
     def __call__(self, state: KaggleProblemState):
         challenge_url = state.challenge_url
+        self.mongo_dict["challenge_url"] = challenge_url
         download_info = self.download_challenge_data(challenge_url)
         result: dict = self.get_saved_challenge_data(challenge_url)
         data = None
@@ -252,7 +249,7 @@ class ScrapeKaggle:
         )
         try:
             # Create directories to store the downloaded files
-            ongoing_dir = f"./ongoing"
+            ongoing_dir = "./ongoing"
             os.makedirs(ongoing_dir, exist_ok=True)
 
             # Download competition files
@@ -328,13 +325,16 @@ class ScrapeKaggle:
         }
 
         self.mongo_dict.update({"summarized": result})
-        self.scraped_data_collection.insert_one(self.mongo_dict)
+        self.scraped_data_collection.update_one(
+            {"challenge_url": self.mongo_dict["challenge_url"]},
+            {
+                "$set": {
+                    "summarized": result,
+                }
+            },
+        )
 
         return result
-
-
-import unittest
-from unittest.mock import MagicMock
 
 
 class TestScrapeKaggle(unittest.TestCase):
@@ -359,7 +359,7 @@ class TestScrapeKaggle(unittest.TestCase):
 if __name__ == "__main__":
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(override=True)
     client = MongoClient(
         host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
     )

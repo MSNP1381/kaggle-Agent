@@ -1,8 +1,7 @@
-from contextlib import asynccontextmanager, contextmanager
-from typing import Any, AsyncIterator, Dict, Iterator, Optional, Sequence, Tuple
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
 
 from langchain_core.runnables import RunnableConfig
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import MongoClient, UpdateOne
 from pymongo.database import Database as MongoDatabase
 

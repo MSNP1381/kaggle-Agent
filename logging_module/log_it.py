@@ -1,6 +1,5 @@
 from typing import Literal
 
-import yaml
 
 from states.main import KaggleProblemState
 

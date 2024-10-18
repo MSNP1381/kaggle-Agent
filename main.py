@@ -1,15 +1,14 @@
 # main.py
-import argparse
-import time
 
 from psycopg import Connection
 from config_reader import config_reader
 from di_container import create_injector
 from agent import KaggleProblemSolver
-from persistence.mongo import MongoDBSaver
 from dotenv import load_dotenv
-from pymongo import MongoClient
 from langgraph.checkpoint.postgres import PostgresSaver
+import coloredlogs
+
+coloredlogs.install()
 
 
 def main():
@@ -28,7 +27,7 @@ def main():
     solver = injector.get(KaggleProblemSolver)
 
     # Compile and invoke the solver
-    graph = solver.compile(checkpointer)
+    solver.compile(checkpointer)
     solver.invoke(url)
 
 
