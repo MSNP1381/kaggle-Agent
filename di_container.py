@@ -31,7 +31,6 @@ class AppModule(Module):
     @singleton
     @provider
     def provide_config(self) -> dict:
-
         return {
             "configurable": {"thread_id": str(int(time.time()))},
             "recursion_limit": config_reader.getint(

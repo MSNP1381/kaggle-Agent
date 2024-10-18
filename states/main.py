@@ -36,7 +36,6 @@ class KaggleProblemState(BaseModel):
         return "".join(code_list)
 
     def get_task_results(self, last_task_num=0, to_str=True):
-
         task_list = ["** Number of executed task results : {last_task_num}\n"]
         for index_, cr in enumerate(self.task_codes_results[:-last_task_num:-1]):
             (enh_task, code, result) = cr

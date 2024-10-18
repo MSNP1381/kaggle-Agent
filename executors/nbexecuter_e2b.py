@@ -9,9 +9,9 @@ class SandboxManager:
         self.sandbox = None
 
     def __enter__(self):
-        l = CodeInterpreter.list()
-        if l:
-            self.sandbox = CodeInterpreter.reconnect(l[0].sandbox_id)
+        enterpretes_list = CodeInterpreter.list()
+        if len(enterpretes_list) > 0:
+            self.sandbox = CodeInterpreter.reconnect(enterpretes_list[0].sandbox_id)
         else:
             self.sandbox = CodeInterpreter()
             self.sandbox.keep_alive(3600)

@@ -76,6 +76,7 @@ class NotebookExecutorInterface(ABC):
     def reset(self) -> None:
         pass
 
+
 class NotebookFailError(Exception):
     """Exception raised for errors in the notebook execution process."""
 
@@ -88,6 +89,7 @@ class NotebookFailError(Exception):
         if self.code:
             return f"{self.message} (Code: {self.code})"
         return self.message
+
 
 def dict_concat(a, b):
     return {**a, **b}
@@ -184,12 +186,15 @@ def state2retrieve_doc():
     for k, v in d.items():
         data.append(Document(page_content=v, metadata={"source": k}))
     return data
+
+
 def format_code(code) -> str:
     """Format Python code using Black."""
     try:
         return black.format_str(code, mode=black.FileMode())
     except black.parsing.InvalidInput:  # type: ignore
         return code
+
 
 def is_valid_python_script(script):
     """Check if a script is a valid Python script."""
@@ -198,6 +203,7 @@ def is_valid_python_script(script):
         return True
     except SyntaxError:
         return False
+
 
 def extract_code(text):
     """Extract python code blocks from the text."""
@@ -221,6 +227,7 @@ def extract_code(text):
         format_code(c) for c in parsed_codes if is_valid_python_script(c)
     ]
     return format_code("\n\n".join(valid_code_blocks))
+
 
 def extract_text_up_to_code(s):
     """Extract (presumed) natural language text up to the start of the first code block."""

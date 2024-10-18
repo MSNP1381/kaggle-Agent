@@ -1,4 +1,5 @@
 import json
+import os
 
 from langchain_openai import ChatOpenAI
 
@@ -15,7 +16,12 @@ from states.code import Code
 from states.enhancer import EnhancedTask
 from states.main import KaggleProblemState
 
-from prompts.code_generation_prompt import IMPROVED_CODE_GEN_PROMPT, DEBUGGING_PROMPT, NEW_SOLUTION_PROMPT, pkg_str
+from prompts.code_generation_prompt import (
+    IMPROVED_CODE_GEN_PROMPT,
+    DEBUGGING_PROMPT,
+    NEW_SOLUTION_PROMPT,
+    pkg_str,
+)
 
 from states.memory import MemoryAgent
 import re
@@ -108,7 +114,7 @@ class GeneratedCode(BaseModel):
 
 class CodeGraphState(TypedDict):
     error: str
-    
+
     error_name: str
 
     error_msg: str
@@ -139,9 +145,8 @@ class CodeGenerationAgent:
         memory_agent: MemoryAgent,
         model="gpt-4o-mini",
         max_iterations=1,
-        base_url="https://api.avalapis.ir/v1",
     ):
-        self.base_url = base_url
+        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
 
         # self.proxy = proxy
 
@@ -211,7 +216,9 @@ class CodeGenerationAgent:
 
         # Get context and examples
         relevant_context = self.memory_agent.ask_docs(current_task)
-        cot_examples = json.dumps(self.memory_agent.get_few_shots(current_task), indent=2)
+        cot_examples = json.dumps(
+            self.memory_agent.get_few_shots(current_task), indent=2
+        )
         logger.info(f"COT examples: {str(cot_examples)}")
 
         evaluation_metric = kaggle_state.evaluation_metric
@@ -284,18 +291,19 @@ class CodeGenerationAgent:
                 **state,
                 "error": "yes",
                 "error_msg": remove_color(exec2s(e.evalue)),
-                "error_name":remove_color(exec2s(e.ename)),
+                "error_name": remove_color(exec2s(e.ename)),
                 "iterations": iterations + 1,
                 "messages": [],
             }
-
 
     def debug_code(self, state: CodeGraphState) -> CodeGraphState:
         logger.info("---DEBUGGING OR GENERATING NEW SOLUTION---")
 
         error_msg = state["error_msg"]
         current_code = str(state["generation"])
-        current_task = str(state["kaggle_state"].enhanced_tasks[state["kaggle_state"].index])
+        current_task = str(
+            state["kaggle_state"].enhanced_tasks[state["kaggle_state"].index]
+        )
         previous_code = state["kaggle_state"].get_executed_codes(2)
 
         # Categorize the error
@@ -307,10 +315,12 @@ class CodeGenerationAgent:
         else:
             approach = "new_solution"
 
-        prompt = self.create_prompt(approach, error_type, current_task, error_msg, current_code, previous_code)
+        prompt = self.create_prompt(
+            approach, error_type, current_task, error_msg, current_code, previous_code
+        )
 
         response = self.llm_raw.invoke(prompt)
-        
+
         if approach == "debug":
             code = extract_code(self.output_parser.invoke(response))
             explanation = extract_text_up_to_code(response)
@@ -319,7 +329,7 @@ class CodeGenerationAgent:
                 "fixed_code": code,
                 "error": "yes",
                 "messages": [],
-                "debug_explanation": explanation
+                "debug_explanation": explanation,
             }
         else:
             new_solution = extract_code(self.output_parser.invoke(response))
@@ -343,10 +353,17 @@ class CodeGenerationAgent:
         else:
             return "unknown"
 
-    def create_prompt(self, approach: str, error_type: str, current_task: str, error_msg: str, current_code: str, previous_code: str) -> str:
+    def create_prompt(
+        self,
+        approach: str,
+        error_type: str,
+        current_task: str,
+        error_msg: str,
+        current_code: str,
+        previous_code: str,
+    ) -> str:
         # Implement prompt creation logic based on the approach and error type
         pass
-
 
     def create_workflow(self):
         workflow = StateGraph(CodeGraphState)
@@ -412,4 +429,3 @@ class CodeGenerationAgent:
         return {
             "task_codes_results": task_codes,
         }
-

@@ -1,3 +1,4 @@
+import os
 from typing import List, Tuple, Optional, Dict, Union
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_core.output_parsers import StrOutputParser
@@ -68,7 +69,8 @@ class MemoryAgent:
         self.task_results_dict = {}
         self.docs_retriever = None
         self.docs_vectorstore = None
-        self.embeddings = OpenAIEmbeddings(base_url="https://api.avalapis.ir/v1")
+        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
+        self.embeddings = OpenAIEmbeddings(base_url=self.base_url)
         self.llm = llm
 
         self.client = mongo
@@ -152,7 +154,7 @@ class MemoryAgent:
                 self.collection.find_one({"_id": doc.metadata["id"]})
                 for doc in similar_examples
             ]
-        except:
+        except Exception:
             return []
 
     def _ensure_examples_in_chroma(self):

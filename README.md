@@ -4,13 +4,13 @@
 
 ## TODO
 
-- [ ] Add Dockerization for code Executor
-- [ ] Explainablity
-- [ ] Logging
-- [ ] Getting formatted evaluation and code execution result without execution
+- [x] Add Dockerization for code Executor
+- [x] Explainablity
+- [x] Logging
+- [x] Getting formatted evaluation and code execution result without execution
 - [ ] adding code generation to graph
-- [ ] add re planner to cycle
-- [ ] revision tasks
+- [x] add re planner to cycle
+- [x] revision tasks
 
 ## 🌟 Overview
 
@@ -35,8 +35,6 @@ It's like a never-ending dance party, but with more algorithms and less awkward 
 Behold, the pièce de résistance of our project – the Agent Graph! 📊
 
 ```mermaid
-
-
 graph TB
     %% Define styles
     style A fill:#f9f,stroke:#333,stroke-width:2px
@@ -86,7 +84,7 @@ graph TB
 
 This isn't just any graph – it's a visual symphony of our agents working in harmony. Watch as data flows through our system like a well-choreographed ballet of bits and bytes!
 
-## 🛠 Setup and Usage (Now with more Poetry!)
+## 🛠 Setup and Usage
 
 1. Clone this repo faster than you can say "git":
 
@@ -94,27 +92,36 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
    git clone https://github.com/msnp1381/kaggle-problem-solver.git
    ```
 
-2. Let Poetry work its magic:
+2. Start the required services using Docker Compose:
+
+   ```
+   docker-compose up -d
+   ```
+
+3. Install Poetry if you haven't already:
+
+   ```
+   curl -sSL https://install.python-poetry.org | python3 -
+   ```
+
+4. Set up the Python environment:
 
    ```
    poetry install
    ```
 
-3. Whisper your secrets to the `.env` file:
+5. Configure the project:
+   - Copy the `.env.template` file to `.env`:
+     ```
+     cp .env.template .env
+     ```
+   - Open the `.env` file and fill in the required environment variables.
+   - Review and update the `config.ini` file if necessary.
+
+6. Run the main script:
 
    ```
-   HTTP_PROXY_URL=super_secret_proxy
-   LANGFUSE_PUBLIC_KEY=shh_its_a_secret
-   LANGFUSE_SECRET_KEY=dont_tell_anyone
-   LANGFUSE_HOST=probably_not_localhost
-   OPENAI_API_KEY=get_it_from_other_github_repos
-
-   ```
-
-4. Unleash the AI:
-
-   ```
-   poetry run python agent.py
+   poetry run python main.py
    ```
 
 ## 🎛 Configuration: Tweak to Your Heart's Content

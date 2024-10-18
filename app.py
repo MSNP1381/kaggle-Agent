@@ -1,4 +1,3 @@
-from psycopg_pool import ConnectionPool
 import streamlit as st
 import time
 import os
@@ -33,11 +32,10 @@ def transform(event, use_log):
             v["enhanced_tasks"] = list(map(lambda x: x.dict(), v["enhanced_tasks"]))
 
         if "task_codes_results" in v:
-            l = []
+            task_codes_results_list = []
             for i in v["task_codes_results"]:
-                l.append((i[0].dict(), i[1].dict(), i[2]))
-            v["task_codes_results"] = l
-        # pprint(v)
+                task_codes_results_list.append((i[0].dict(), i[1].dict(), i[2]))
+            v["task_codes_results"] = task_codes_results_list
         return v
 
 
@@ -88,12 +86,6 @@ def start(use_langfuse=False, use_pg_persistence=True):
             "configurable": {"thread_id": str(int(time.time()))},
             "recursion_limit": 50,
         }
-        if use_pg_persistence:
-            pool = ConnectionPool(
-                # Example configuration
-                conninfo=os.getenv("DB_URI"),
-                max_size=20,
-            )
 
         # checkpointer = PostgresSaver(sync_connection=pool)
         # checkpointer.create_tables(pool)

@@ -46,8 +46,8 @@ class ScrapeKaggle:
         client: MongoClient,
         config=None,
         proxy=None,
-        base_url="https://api.avalapis.ir/v1",
     ):
+        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
         """
         Initializes the DataUtils with configuration and proxy settings.
 
@@ -64,7 +64,7 @@ class ScrapeKaggle:
         if proxy:
             http_client = httpx.Client(proxy=proxy)
         self.llm = ChatOpenAI(
-            base_url=base_url,
+            base_url=self.base_url,
             model="gpt-4o-mini",
             http_client=http_client,
             api_key=os.getenv("OPENAI_API_KEY"),

@@ -94,9 +94,10 @@ class KaggleProblemPlanner:
             llm (ChatOpenAI): Language model for generating plans.
             memory (MemoryAgent): Memory agent for managing problem-solving state.
         """
+        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
         self.config = config
         self.llm = ChatOpenAI(
-            base_url="https://api.avalapis.ir/v1",
+            base_url=self.base_url,
             model="gpt-4o",
             temperature=0.75,
         )
@@ -169,7 +170,6 @@ class KaggleProblemPlanner:
             file_path (str): Path to save the JSON file.
         """
         try:
-
             with open(file_path, "w") as f:
                 json.dump(plan, f, indent=2)
             logger.info(f"Plan saved to {file_path}")

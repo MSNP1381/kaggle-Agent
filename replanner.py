@@ -88,9 +88,11 @@ Based on the above information, should the project plan be adjusted? If so, plea
             self.re_plan_prompt.format_messages(
                 problem_description=state.problem_description,
                 state=self._format_state_for_prompt(state),
-                last_task=last_task,
-                execution_result=execution_result,
-                current_plan=current_plan,
+                last_task=state.last_task,
+                execution_result=self._get_execution_result(
+                    state.task_codes_results, state.last_task
+                ),
+                current_plan=state.planned_tasks,
                 format_instructions=self.output_parser.get_format_instructions(),
                 relevant_context="\n".join(relevant_context),
             ),

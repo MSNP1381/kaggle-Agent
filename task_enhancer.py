@@ -82,7 +82,6 @@ Your goal is to provide clear, actionable insights that will improve the ML proj
         current_task = state.planned_tasks[state.index]
         relevant_context = self.memory_agent.ask_docs(current_task)
 
-
         response = self.task_enhancement_prompt.format_messages(
             current_task=current_task,
             evaluation_metrics=state.evaluation_metric,
@@ -96,7 +95,7 @@ Your goal is to provide clear, actionable insights that will improve the ML proj
             relevant_context=relevant_context,
         )
 
-        enhanced_task = (self.llm|self.output_parser).invoke(response)
+        enhanced_task = (self.llm | self.output_parser).invoke(response)
         parsed_task = EnhancedTask(final_answer=enhanced_task)
 
         # Add the enhanced task to memory

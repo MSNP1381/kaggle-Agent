@@ -108,11 +108,7 @@ class NBExecutorAutoGen:
         new_cell = nbformat.v4.new_code_cell(code)
 
         # Set the output for the code cell
-        output_data = {
-            "output_type": "stream",
-            "name": "stdout",
-            "text": result.model_dump_json(indent=1),
-        }
+
         new_cell["outputs"] = [
             nbformat.v4.new_output(
                 output_type="stream",
