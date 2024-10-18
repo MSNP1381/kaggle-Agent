@@ -91,7 +91,7 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
 1. Clone this repo faster than you can say "git":
 
    ```
-   git clone https://github.com/your-username/kaggle-problem-solver.git
+   git clone https://github.com/msnp1381/kaggle-problem-solver.git
    ```
 
 2. Let Poetry work its magic:
