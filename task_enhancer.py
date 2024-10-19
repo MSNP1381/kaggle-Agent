@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
@@ -21,6 +22,17 @@ class KaggleTaskEnhancer:
             ]
         )
         self.output_parser = StrOutputParser()
+        
+        # Set up logging
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+        
+        self.logger.info("KaggleTaskEnhancer initialized")
 
     def _get_system_message(self) -> str:
         return """
@@ -80,7 +92,10 @@ Your goal is to provide clear, actionable insights that will improve the ML proj
 
     def enhance_task(self, state: KaggleProblemState) -> Dict[str, Any]:
         current_task = state.planned_tasks[state.index]
+        self.logger.info(f"Enhancing task: {current_task}")
+
         relevant_context = self.memory_agent.ask_docs(current_task)
+        self.logger.debug(f"Retrieved relevant context: {relevant_context[:5]}...")
 
         response = self.task_enhancement_prompt.format_messages(
             current_task=current_task,
@@ -95,14 +110,16 @@ Your goal is to provide clear, actionable insights that will improve the ML proj
             relevant_context=relevant_context,
         )
 
+        self.logger.debug("Invoking LLM for task enhancement")
         enhanced_task = (self.llm | self.output_parser).invoke(response)
         parsed_task = EnhancedTask(final_answer=enhanced_task)
 
+        self.logger.info("Task enhanced successfully")
+        self.logger.debug(f"Enhanced task: {parsed_task.final_answer[:100]}...")
+
         # Add the enhanced task to memory
         self.memory_agent.add_to_short_term_memory(str(parsed_task))
-        # self.memory_agent.add_document(
-        #     **{"doc_type": "enhanced_task", "content": parsed_task.dict()}
-        # )
+        self.logger.debug("Enhanced task added to short-term memory")
 
         return {
             "index": state.index,
@@ -110,25 +127,6 @@ Your goal is to provide clear, actionable insights that will improve the ML proj
         }
 
     def __call__(self, state: KaggleProblemState):
+        self.logger.info(f"Processing task at index {state.index}")
         state.index += 1
-
-        # Get relevant context from memory
-        # relevant_context = self.memory_agent.ask_docs(state.planned_tasks[state.index])
-
-        # enhanced_task = self.llm.invoke(
-        #     self.task_enhancement_prompt.format(
-        #         current_task=state.planned_tasks[index],
-        #         problem_description=state.problem_description,
-        #         dataset_info=str(state.dataset_info),
-        #         task_results=state.get_task_results(),
-        #         modelInfo=str(state.modelInfo),
-        #         planned_tasks=str(state.planned_tasks),
-        #         future_tasks=str(state.get_future_tasks()),
-        #         evaluation_metric=state.evaluation_metric,
-        #         best_score=state.best_score,
-        #         num_task_results=len(state.task_codes_results),
-        #         format_instructions=self.memory_agent.get_format_instructions(),
-        #         relevant_context="\n".join(relevant_context),
-        #     )
-        # )
         return self.enhance_task(state)

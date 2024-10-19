@@ -40,15 +40,6 @@ from injector import inject
 
 # Initialize logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.FileHandler("code_generation_agent.log"),
-        logging.StreamHandler(),
-    ],
-)
-
 logger = logging.getLogger(__name__)
 
 

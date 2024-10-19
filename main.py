@@ -7,8 +7,18 @@ from agent import KaggleProblemSolver
 from dotenv import load_dotenv
 from langgraph.checkpoint.postgres import PostgresSaver
 import coloredlogs
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler("kaggle_agent.log"),
+        logging.StreamHandler(),
+    ],
+)
 
 coloredlogs.install()
+logger = logging.getLogger(__name__)
 
 
 def main():
