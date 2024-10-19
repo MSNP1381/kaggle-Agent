@@ -1,27 +1,26 @@
 # di_container.py
-from injector import Injector, Module, singleton, provider
-from pymongo import MongoClient
+import os
+import time
+
+from injector import Injector, Module, provider, singleton
 from langchain_openai import ChatOpenAI
-from code_manager import KaggleCodeManager
-from code_generation_agent import CodeGenerationAgent
-from kaggle_scraper import ScrapeKaggle
+from langfuse.callback import CallbackHandler
 from psycopg import Connection
+from pymongo import MongoClient
+
+from code_generation_agent import CodeGenerationAgent
+from code_manager import KaggleCodeManager
+from config_reader import config_reader
+from data_utils import DataUtils
 
 # from nbexecuter_e2b import E2B_executor, SandboxManager
 from executors.nbexecutor_jupyter import JupyterExecutor
+from kaggle_scraper import ScrapeKaggle
 
 # from replanner import KaggleProblemRePlanner
 from planner_agent import KaggleProblemPlanner
-from task_enhancer import KaggleTaskEnhancer
-from data_utils import DataUtils
-import os
-from config_reader import config_reader
-
-from langfuse.callback import CallbackHandler
-import time
-
-from submission.submission import SubmissionNode  # Correct Python import
 from states.memory import MemoryAgent  # Add this import
+from task_enhancer import KaggleTaskEnhancer
 
 
 class AppModule(Module):
@@ -124,11 +123,6 @@ class AppModule(Module):
         return CodeGenerationAgent(
             llm, config, nb_executor=nb_executor, memory_agent=memory_agent
         )
-
-    @singleton
-    @provider
-    def provide_submission_node(self) -> SubmissionNode:
-        return SubmissionNode()
 
     @singleton
     @provider

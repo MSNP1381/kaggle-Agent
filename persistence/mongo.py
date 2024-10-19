@@ -2,9 +2,6 @@ from contextlib import contextmanager
 from typing import Any, Dict, Iterator, Optional, Sequence, Tuple
 
 from langchain_core.runnables import RunnableConfig
-from pymongo import MongoClient, UpdateOne
-from pymongo.database import Database as MongoDatabase
-
 from langgraph.checkpoint.base import (
     BaseCheckpointSaver,
     ChannelVersions,
@@ -13,6 +10,8 @@ from langgraph.checkpoint.base import (
     CheckpointTuple,
     get_checkpoint_id,
 )
+from pymongo import MongoClient, UpdateOne
+from pymongo.database import Database as MongoDatabase
 
 
 class MongoDBSaver(BaseCheckpointSaver):

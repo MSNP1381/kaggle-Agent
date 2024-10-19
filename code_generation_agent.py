@@ -1,32 +1,25 @@
 import json
+import logging
 import os
-
-from langchain_openai import ChatOpenAI
-
-from langgraph.graph import END, StateGraph
-
+import re
 from typing import List, TypedDict
 
+from injector import inject
 from langchain_core.output_parsers.string import StrOutputParser
-
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, StateGraph
 from pydantic import BaseModel, Field
 
-from states.code import Code
-
-from states.enhancer import EnhancedTask
-from states.main import KaggleProblemState
-
 from prompts.code_generation_prompt import (
-    IMPROVED_CODE_GEN_PROMPT,
     DEBUGGING_PROMPT,
+    IMPROVED_CODE_GEN_PROMPT,
     NEW_SOLUTION_PROMPT,
     pkg_str,
 )
-
+from states.code import Code
+from states.enhancer import EnhancedTask
+from states.main import KaggleProblemState
 from states.memory import MemoryAgent
-import re
-import logging
-
 from utils import (
     CellError,
     NotebookExecutorInterface,
@@ -35,8 +28,6 @@ from utils import (
     extract_code,
     extract_text_up_to_code,
 )
-
-from injector import inject
 
 # Initialize logging
 
@@ -156,6 +147,10 @@ class CodeGenerationAgent:
 
         self.llm_raw = llm
 
+        # self.llm_raw = llm.bind_tools(
+        #     tools=[submit_to_kaggle],
+        # )
+
         self.uploaded = False
 
         self.code_gen_chain = self.code_gen_prompt | self.llm_raw | self.output_parser
@@ -166,6 +161,10 @@ class CodeGenerationAgent:
 
         self.debugging_prompt = DEBUGGING_PROMPT
         self.new_solution_prompt = NEW_SOLUTION_PROMPT
+
+        # Define the OpenAI function for Kaggle submission
+
+        # Add the Kaggle submission function to the LLM's available functions
 
     def add_init_code(self, state: CodeGraphState):
         if len(state["kaggle_state"].task_codes_results) == 0:
@@ -207,10 +206,10 @@ class CodeGenerationAgent:
 
         # Get context and examples
         relevant_context = self.memory_agent.ask_docs(current_task)
-        cot_examples = json.dumps(
+        few_shots_examples = json.dumps(
             self.memory_agent.get_few_shots(current_task), indent=2
         )
-        logger.info(f"COT examples: {str(cot_examples)}")
+        logger.info(f"Few shots examples: {str(few_shots_examples)[:100]}...")
 
         evaluation_metric = kaggle_state.evaluation_metric
         planned_tasks = kaggle_state.get_planned_tasks()
@@ -232,10 +231,11 @@ class CodeGenerationAgent:
                 "current_task": current_task,
                 "evaluation_metric": evaluation_metric,
                 "planned_tasks": planned_tasks,
+                "previous_tasks": state["kaggle_state"].get_previous_result(2),
                 "relevant_context": relevant_context,
                 "messages": messages,
-                "previous_task_results": kaggle_state.get_executed_codes(2),
-                "cot_examples": cot_examples,
+                "previous_codes": kaggle_state.get_executed_codes(5),
+                "few_shots_examples": few_shots_examples,
                 "current_code": str(state.get("generation", "")),
                 "error_msg": state.get("error_msg", ""),
             },
@@ -247,7 +247,7 @@ class CodeGenerationAgent:
         code_solution = GeneratedCode(code=code_exp)
 
         logger.info("Generated code solution:")
-        logger.info(explanation)
+        logger.debug(explanation)
 
         return {
             "generation": code_solution,
@@ -260,7 +260,6 @@ class CodeGenerationAgent:
         logger.info("---EXECUTING CODE---")
 
         code_solution = state["generation"]
-
         iterations = state["iterations"]
 
         try:
@@ -276,7 +275,7 @@ class CodeGenerationAgent:
             }
 
         except CellError as e:
-            logger.error(f"XXX ---CODE EXECUTION FAILED: {e.ename}--- XXXX")
+            logger.error(f"XXX ---CODE EXECUTION FAILED: {e.evalue}--- XXXX")
 
             return {
                 **state,
@@ -403,8 +402,11 @@ class CodeGenerationAgent:
         }
 
         self.max_iterations = max_iterations
-        self.llm_raw.temperature = temp
-        self.code_gen_chain.steps[1].temperature = temp
+
+        # Update these lines
+        self.llm_raw = self.llm_raw.with_config(temperature=temp)
+        self.code_gen_chain = self.code_gen_chain.with_config(temperature=temp)
+
         self.add_init_code(initial_state)
         result = self.workflow.invoke(initial_state, config=self.config)
 

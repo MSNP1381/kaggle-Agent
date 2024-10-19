@@ -1,9 +1,11 @@
-from typing import Any, Dict, List, Optional, Tuple
-from pydantic import BaseModel, Field
 from operator import add
+from typing import Any, Dict, List, Optional, Tuple
+
+from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
 from states.code import Code
+
 from .enhancer import EnhancedTask
 
 
@@ -25,10 +27,13 @@ class KaggleProblemState(BaseModel):
     enhanced_tasks: Annotated[List[EnhancedTask], add] = Field(default=[])
     file_env_var: str = None
 
-    def get_executed_codes(self, last_task_num=-1):
+    def get_executed_codes(self, last_task_num=-1) -> str:
         code_list = []
+        if len(self.task_codes_results) == 0:
+            return ""
         if last_task_num == -1:
             last_task_num = len(self.task_codes_results)
+
         for _, code, _ in self.task_codes_results[:-last_task_num:-1]:
             code_list.append("\n# %% \n")
             code_list.append(str(code))
@@ -43,7 +48,7 @@ class KaggleProblemState(BaseModel):
                 f"""
 Executed Task No.{index_+1}
 
-**Task Description :** 
+**Task Description :**
 `
 {str(enh_task.task)}
 `
@@ -52,7 +57,7 @@ Executed Task No.{index_+1}
 ``` python
 {str(code)}
 ```
----------------------------------------- 
+----------------------------------------
 **Output Result :**
 `
 {result}
@@ -79,3 +84,28 @@ Executed Task No.{index_+1}
 
     def __repr__(self) -> str:
         return self.model_dump_json(indent=1)
+
+    def get_previous_result(self, last_n: int = 1) -> str:
+        """
+        Get the result of the previous task(s).
+
+        Args:
+            last_n (int): Number of previous results to retrieve. Defaults to 1.
+
+        Returns:
+            str: A formatted string containing the previous task result(s).
+        """
+        if not self.task_codes_results:
+            return "No previous results available."
+
+        results = []
+        for i, (enhanced_task, _, result) in enumerate(
+            self.task_codes_results[-last_n:][::-1], 1
+        ):
+            results.append(
+                f"Previous Task {i}:\n"
+                f"Task: {enhanced_task.final_answer}\n"
+                f"Result:\n{result}\n"
+            )
+
+        return "\n".join(results)

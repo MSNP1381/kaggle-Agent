@@ -1,15 +1,14 @@
 import json
-
-from dataclasses import dataclass, asdict
-from abc import ABC
 import re
+from abc import ABC
+from dataclasses import asdict, dataclass
 from typing import List, Union
 
 import black
+from langchain_core.documents import Document
 
 # from states.main import KaggleProblemState
 from states.write_challenge_docs import TEXT
-from langchain_core.documents import Document
 
 
 @dataclass
@@ -70,7 +69,7 @@ class NotebookExecutorInterface(ABC):
         self.executor = None
         self.is_restarted = False
 
-    def test_and_execute(self, new_code: str) -> Union[CellResult, List[CellResult]]:
+    def test_and_execute(self, new_code: str) -> CellResult:
         pass
 
     def reset(self) -> None:
@@ -164,6 +163,7 @@ def append_url(base_url: str, sub_url: str, use_https: bool = True) -> str:
 
 def state2doc_write(state) -> str:
     name = state.challenge_url.split("/")[-2]
+    important_notes = open("./important_notes/important_notes.txt").read()
     d = {
         "challenge_name": name,
         "problem_description": state.problem_description,
@@ -171,7 +171,9 @@ def state2doc_write(state) -> str:
         "qualitative_analysis": state.qualitative_analysis,
         "dataset_info": state.dataset_info,
         "evaluation": state.evaluation_metric,
+        "important_notes": important_notes,
     }
+
     s = TEXT.format(**d)
     open("./ongoing/doc.txt", "w").write(s)
     with open("./ongoing/doc_dict.json", "w") as file:
@@ -234,3 +236,24 @@ def extract_text_up_to_code(s):
     if "```" not in s:
         return ""
     return s[: s.find("```")].strip()
+
+
+def extract_markdown(text):
+    """Extract markdown content from the text."""
+    parsed_markdown = []
+
+    # Extract content between markdown code blocks
+    matches = re.split(r"```[\s\S]*?```", text)
+
+    for match in matches:
+        # Remove any remaining backticks
+        cleaned_match = re.sub(r"`", "", match)
+        # Remove any remaining Python prompts
+        cleaned_match = re.sub(r"^>>>\s?", "", cleaned_match, flags=re.MULTILINE)
+        # Remove leading/trailing whitespace
+        cleaned_match = cleaned_match.strip()
+
+        if cleaned_match:
+            parsed_markdown.append(cleaned_match)
+
+    return "\n\n".join(parsed_markdown)

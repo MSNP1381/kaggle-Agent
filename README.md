@@ -61,13 +61,13 @@ graph TB
         J[Generate Code]
         K{Is Code Valid?}
         L((Finish))
-        
+
         I --> J
         J --> K
         K -- Yes --> L
         K -- No --> J
     end
-    
+
     %% Link the main process to subgraph
     C -->|Initiates| I
     L -->|Returns| E
@@ -75,7 +75,7 @@ graph TB
     %% Annotations
     classDef annotation fill:#fff,stroke:none,color:#333,font-size:12px;
     class B,G,D,F,C,E annotation;
-    
+
     %% Annotating Feedback Loops
     E -. Feedback Loop .-> F
     E -. Completion .-> H
@@ -111,6 +111,7 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
    ```
 
 5. Configure the project:
+
    - Copy the `.env.template` file to `.env`:
      ```
      cp .env.template .env

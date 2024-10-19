@@ -1,10 +1,11 @@
+import os
+import time
+
+import nbformat
+import requests
 from autogen.coding import CodeBlock
 from autogen.coding.base import IPythonCodeResult
 from autogen.coding.jupyter import DockerJupyterServer, JupyterCodeExecutor
-import nbformat
-import time
-import requests
-import os
 
 
 class CellException:

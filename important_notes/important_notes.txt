@@ -1,0 +1,11 @@
+
+for submitting on kaggle, you need to submit a csv file with the name "submission.csv"
+
+and use this code
+
+```python
+
+import kaggle
+
+kaggle.api.competition_submit(submission_file, submission_message, competition)
+```

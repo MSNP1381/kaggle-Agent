@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
 
-"""
-TODO 
-- [x]: change pop to increase index
-- [x]: make a list of enhanced task
-- [ ]: change enhancer prompt
-"""
+#
+# TODO
+# - [x]: change pop to increase index
+# - [x]: make a list of enhanced task
+# - [ ]: change enhancer prompt
+#
 
 
 class EnhancedTask(BaseModel):

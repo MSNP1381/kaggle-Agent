@@ -1,12 +1,13 @@
-import streamlit as st
-import time
 import os
-import httpx
-from dotenv import load_dotenv
-from agent import KaggleProblemSolver
-from langfuse.callback import CallbackHandler
-from logging_module import log_it
+import time
 
+import httpx
+import streamlit as st
+from dotenv import load_dotenv
+from langfuse.callback import CallbackHandler
+
+from agent import KaggleProblemSolver
+from logging_module import log_it
 
 # Initialize session state variables
 if "running" not in st.session_state:

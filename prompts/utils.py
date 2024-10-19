@@ -44,7 +44,7 @@ Ensure your analysis is thorough, insightful, and directly applicable to the mac
 - Do not introduce any assumptions beyond the provided data.
 
 Notes:
-- always follow column names from dataset head and dataset overview as it is.dont use any extra spaces ot uppercase or extra formatting 
+- always follow column names from dataset head and dataset overview as it is.dont use any extra spaces ot uppercase or extra formatting
 - you must adhere provided format instruction:
 {format_instructions}
 """

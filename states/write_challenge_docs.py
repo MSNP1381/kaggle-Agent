@@ -17,6 +17,6 @@ Data set Info
 {dataset_info}
 
 ### evaluation_metric
-{evaluation} 
+{evaluation}
 
 """

@@ -1,9 +1,9 @@
-import time
-import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
 import copy
-from nbconvert.preprocessors import CellExecutionError
+import time
+
+import nbformat
 import pandas as pd
+from nbconvert.preprocessors import CellExecutionError, ExecutePreprocessor
 
 
 class NBExecutor:

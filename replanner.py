@@ -1,8 +1,9 @@
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
+from typing import Any, Dict, List, Optional
+
 from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 
 from states.main import KaggleProblemState
 from states.memory import MemoryAgent  # Add this import

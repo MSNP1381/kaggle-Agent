@@ -1,13 +1,12 @@
 from langchain_core.prompts import ChatPromptTemplate
 
-
 PLANNER_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
             """
-You are a Kaggle grandmaster attending a competition. 
-In order to win this competition, you need to come up with an excellent and creative plan 
+You are a Kaggle grandmaster attending a competition.
+In order to win this competition, you need to come up with an excellent and creative plan
  our task is to thoroughly analyze the given information and provide a comprehensive, step-by-step plan that addresses every crucial stage of the problem-solving process.
 
 ### **Key Responsibilities:**
@@ -46,7 +45,7 @@ In order to win this competition, you need to come up with an excellent and crea
 '''
 ########################
 
-- **Qualitative Analysis:** 
+- **Qualitative Analysis:**
 '''
 {qualitative_analysis}
 '''

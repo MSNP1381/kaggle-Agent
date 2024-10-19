@@ -1,6 +1,5 @@
 from typing import Literal
 
-
 from states.main import KaggleProblemState
 
 

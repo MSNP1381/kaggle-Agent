@@ -1,7 +1,8 @@
 from typing import List
-from utils import CellResult, NotebookExecutorInterface, CellError
 
 from e2b_code_interpreter import CodeInterpreter
+
+from utils import CellError, CellResult, NotebookExecutorInterface
 
 
 class SandboxManager:

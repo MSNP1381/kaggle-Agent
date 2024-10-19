@@ -1,25 +1,27 @@
 import os
-from typing import List, Tuple, Optional, Dict, Union
+from typing import Dict, List, Optional, Tuple, Union
+
+from bson import ObjectId
+from injector import inject
+from langchain.chains import ConversationalRetrievalChain
+from langchain.schema import Document
 from langchain.text_splitter import CharacterTextSplitter
+from langchain_chroma import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import OpenAIEmbeddings
-from langchain_chroma import Chroma
-from langchain.chains import ConversationalRetrievalChain
-from langchain.schema import Document
-from bson import ObjectId
-from injector import inject
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from utils import state2retrieve_doc
 
 RETRIVE_PROMPT = PromptTemplate.from_template(
     """
 You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
-you get a task and generate data relevant to task and insights, think before answering and show your thinking process step by step  
-Question: {question} 
+you get a task and generate data relevant to task and insights, think before answering and show your thinking process step by step
+Question: {question}
 
-Context: {context} 
+Context: {context}
 """
 )
 

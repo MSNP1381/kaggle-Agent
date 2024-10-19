@@ -52,13 +52,13 @@ graph TB
         J[Generate Code]
         K{Is Code Valid?}
         L((Finish))
-        
+
         I --> J
         J --> K
         K -- Yes --> L
         K -- No --> J
     end
-    
+
     %% Link the main process to subgraph
     C -->|Initiates| I
     L -->|Returns| E

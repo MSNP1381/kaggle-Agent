@@ -1,13 +1,15 @@
 import json
-import os
 import logging
-from injector import inject
-from langchain_openai import ChatOpenAI
+import os
 from typing import List
+
+from injector import inject
+from langchain.output_parsers import PydanticOutputParser
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
+
 from prompts.prompts import PLANNER_PROMPT
 from states.main import KaggleProblemState
-from langchain.output_parsers import PydanticOutputParser
 from states.memory import MemoryAgent
 from utils import state2doc_write
 
@@ -188,7 +190,7 @@ class KaggleProblemPlanner:
 
         logger.info("Initializing document retrieval")
         self.memory.init_doc_retrieve()
-
+        logger.info("no_plan: " + str(os.getenv("no_plan")))
         if os.getenv("no_plan"):
             initial_plan = self.load_plan_from_json()
         else:

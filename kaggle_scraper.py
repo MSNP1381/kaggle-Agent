@@ -1,24 +1,25 @@
-import os
 import json
+import os
 import pprint
 import unittest
 import zipfile
 from unittest.mock import MagicMock
 
 import httpx
+from kaggle.api.kaggle_api_extended import KaggleApi
+from kaggle.rest import ApiException
+from langchain.output_parsers import PydanticOutputParser
+from langchain.output_parsers.fix import StrOutputParser
+from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
+from markdownify import markdownify
+from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.proxy import Proxy, ProxyType
-from langchain.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from langchain.output_parsers.fix import StrOutputParser
-from kaggle.api.kaggle_api_extended import KaggleApi
-from markdownify import markdownify
-from pydantic import BaseModel, Field
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from prompts.summarizer_prompt import (
     CHALLENGE_DATA_PROMPT,
@@ -26,10 +27,6 @@ from prompts.summarizer_prompt import (
     CHALLENGE_EVALUATION_PROMPT,
 )
 from states.main import KaggleProblemState
-
-from kaggle.rest import ApiException
-
-
 from utils import append_url
 
 

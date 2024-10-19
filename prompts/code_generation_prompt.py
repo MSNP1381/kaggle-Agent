@@ -1,4 +1,5 @@
 import random
+
 from langchain.prompts import ChatPromptTemplate
 
 libraries = open("./notebook_requirements.txt").readlines()
@@ -10,43 +11,63 @@ IMPROVED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-You are a Kaggle grandmaster expert in machine learning and data science. Generate executable Python code for the given task in a Jupyter notebook environment.
-
-Guidelines:
-1. Continue from previous code, avoiding repetition of operations.
-2. Implement the proposed solution and print the evaluation metric on a hold-out validation set.
-3. Create a self-contained, single-file Python program.
-4. Provide a complete script without skipping parts.
-5. Use a single code block in your response.
-6. Input data is in "./input"; save test predictions as "submission.csv" in "./working".
-7. Temporary files can be stored in "./working".
-8. Prioritize code efficiency and follow PEP 8 style guidelines.
-9. Include error handling and input validation where appropriate.
-10. Use this Evaluation Metric: {evaluation_metric}
+You are an AI assistant tasked with generating Python code for a Kaggle machine learning problem. Your goal is to create efficient and effective code based on the given task and context.
 
 Context:
-- Problem Goal: {problem_description}
+problem_description: {problem_description}
+current_task: {current_task}
+evaluation_metric: {evaluation_metric}
+planned_tasks: {planned_tasks}
+previous_codes: {previous_codes}
 
-Available packages: {pkg_str}
-Note: All packages are pre-installed. Prefer PyTorch for neural networks.
-    """,
+Current Task:
+{current_task}
+
+Instructions:
+1. Analyze the current task and its relationship to the overall project.
+2. Review the previous code and consider how it can be built upon or improved.
+3. Think step-by-step about the best approach to implement the current task:
+   a. What libraries or functions will be needed?
+   b. How can we ensure efficiency and readability?
+   c. Are there any potential pitfalls or edge cases to consider?
+   d. How does this code fit into the broader project structure?
+4. Generate the Python code for the current task, incorporating your step-by-step reasoning.
+5. Briefly explain your code and reasoning, highlighting any important decisions or trade-offs.
+
+Your response should follow this structure:
+1. Task Analysis
+2. Previous Code Review
+3. Step-by-step Reasoning
+4. Generated Code
+5. Explanation and Justification
+
+Remember to consider best practices, code efficiency, and the specific requirements of the Kaggle problem.
+""",
         ),
         (
             "human",
             """
-Generate new code continuing from:
-{previous_task_results}
+Current task: {current_task}
+Evaluation metric: {evaluation_metric}
 
-Your code should:
-1. Build upon previous operations and variable definitions.
-2. Address the current task: {current_task}
-3. Incorporate this context: {relevant_context}
-4. Include only new operations, avoiding repetition.
-5. Be executable and advance the overall solution.
-6. Include brief comments explaining key steps.
+## Previous tasks:
 
-Provide your solution as a single Python code block.
-    """,
+```
+
+{previous_tasks}
+
+```
+
+## Previous codes:
+
+```
+
+{previous_codes}
+
+```
+
+Generate code for the current task.
+""",
         ),
     ]
 )
@@ -74,8 +95,21 @@ Error message: {error_msg}
 Current code:
 {current_code}
 
-Previous task results:
-{previous_task_results}
+## Previous tasks:
+
+```
+
+{previous_tasks}
+
+```
+
+## Previous codes:
+
+```
+
+{previous_codes}
+
+```
 
 Please debug the code and provide a fixed version.
     """,
@@ -104,7 +138,7 @@ Guidelines:
 Problem description: {problem_description}
 Current task: {current_task}
 Evaluation metric: {evaluation_metric}
-Previous task results: {previous_task_results}
+Previous task results: {previous_tasks}
 Error message from previous attempt: {error_msg}
 
 Please generate a new solution that addresses the current task and avoids previous errors.

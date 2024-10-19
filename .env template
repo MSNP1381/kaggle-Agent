@@ -23,5 +23,3 @@ DATABASE_URL=postgresql://username:password@url/dbname
 
 KAGGLE_USERNAME='username'
 KAGGLE_KEY='key'
-
-

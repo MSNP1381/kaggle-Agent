@@ -1,13 +1,16 @@
 # main.py
 
-from psycopg import Connection
-from config_reader import config_reader
-from di_container import create_injector
-from agent import KaggleProblemSolver
+import logging
+
+import coloredlogs
 from dotenv import load_dotenv
 from langgraph.checkpoint.postgres import PostgresSaver
-import coloredlogs
-import logging
+from psycopg import Connection
+
+from agent import KaggleProblemSolver
+from config_reader import config_reader
+from di_container import create_injector
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

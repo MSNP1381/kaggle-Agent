@@ -1,26 +1,27 @@
 #!/home/msnp/miniconda3/envs/kaggle_agent/bin/python
 import argparse
+import os
 import time
+
+import kaggle
+from dotenv import load_dotenv
 from injector import inject
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 from pymongo import MongoClient
+
 from code_manager import KaggleCodeManager
-from kaggle_scraper import ScrapeKaggle
+from data_utils import DataUtils
+from di_container import create_injector
 from executors.nbexecutor_jupyter import JupyterExecutor
+from kaggle_scraper import ScrapeKaggle
 from persistence.mongo import MongoDBSaver
 
 # from planner_agent import KaggleProblemPlanner
 from planner_agent import KaggleProblemPlanner
-from dotenv import load_dotenv
-import os
 
 # from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
-from data_utils import DataUtils
-import kaggle
-from submission.submission import SubmissionNode  # Import the new SubmissionNode
-from di_container import create_injector
 
 
 class KaggleProblemSolver:
@@ -38,7 +39,6 @@ class KaggleProblemSolver:
         enhancer: KaggleTaskEnhancer,
         data_utils: DataUtils,
         # handler: CallbackHandler,
-        submission_node: SubmissionNode,  # Inject the SubmissionNode
     ):
         self.config = config
         # self.proxy = proxy
@@ -51,7 +51,6 @@ class KaggleProblemSolver:
         self.enhancer = enhancer
         self.data_utils = data_utils
         # self.handler = handler
-        self.submission_node = submission_node
 
     def _init_state(self, url: str):
         self.dataset_path = "./ongoing/train.csv"
@@ -83,7 +82,7 @@ class KaggleProblemSolver:
         )
         if state.index == len(state.planned_tasks) - 1:
             # return END
-            return "submission_node"
+            return END
         return "enhancer"
 
     def compile(self, checkpointer):
@@ -95,9 +94,6 @@ class KaggleProblemSolver:
         # graph_builder.add_node("executor", self.executor)
         graph_builder.add_node("enhancer", self.enhancer)
         graph_builder.add_node("data_utils", self.data_utils)
-        graph_builder.add_node(
-            "submission_node", self.submission_node
-        )  # Add the SubmissionNode
 
         graph_builder.add_edge(START, "scraper")
         graph_builder.add_edge("scraper", "data_utils")
@@ -111,9 +107,8 @@ class KaggleProblemSolver:
         graph_builder.add_conditional_edges(
             "code_manager",
             self.is_plan_done,
-            path_map={"submission_node": "submission_node", "enhancer": "enhancer"},
+            path_map={"enhancer": "enhancer", END: END},
         )
-        graph_builder.add_edge("submission_node", END)
 
         # memory = SqliteSaver.from_conn_string(":memory:")
 

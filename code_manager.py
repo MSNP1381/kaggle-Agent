@@ -1,8 +1,9 @@
-from injector import inject
-from code_generation_agent import CodeGenerationAgent
-from states.main import KaggleProblemState
 import logging
 
+from injector import inject
+
+from code_generation_agent import CodeGenerationAgent
+from states.main import KaggleProblemState
 from utils import NotebookFailError
 
 
@@ -14,7 +15,7 @@ class KaggleCodeManager:
         self.temp = 0
 
     def run(self, state):
-        temp_increase = 0.65
+        temp_increase = 0.25
         for i in range(3):
             try:
                 return self.code_agent(
@@ -24,7 +25,7 @@ class KaggleCodeManager:
             except NotebookFailError as e:
                 logging.error(f"Error in code agent execution: {e}")
                 self.temp += temp_increase
-                self.temp = min(2.0, self.temp)
+                self.temp = min(1.0, self.temp)
             except Exception as e:
                 raise e  # Raise error if it is not NotebookFailError
 
