@@ -1,4 +1,4 @@
-# 🚀 Kaggle Problem Solver: Your AI-Powered ML Sidekick
+# Kaggale agent Iter #1: KagGooLY
 
 > Note that because of nature of project it could be very dependant to iterarions and no plan is strait forward for this type of projects.
 
@@ -111,9 +111,11 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
 5. Configure the project:
 
    - Copy the `.env.template` file to `.env`:
+
      ```
      cp .env.template .env
      ```
+
    - Open the `.env` file and fill in the required environment variables.
    - Review and update the `config.ini` file if necessary.
 
@@ -123,7 +125,50 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
    poetry run python main.py
    ```
 
-## 🎛 Configuration: Tweak to Your Heart's Content
+## 🛠 Configuration
+
+The Kaggle Problem Solver can be customized using the `config.ini` file. This file allows you to adjust various settings without modifying the code directly. Here's how you can change the configuration:
+
+### Editing config.ini
+
+1. Open the `config.ini` file in a text editor.
+2. Modify the values as needed. Here are some key sections and their purposes:
+
+   ````ini
+   [General]
+   recursion_limit = 50  # Set the maximum recursion depth
+
+   [API]
+   base_url = https://api.avalapis.ir/v1  # API base URL
+   model = gpt-4o-mini  # Choose the AI model
+   temperature = 0.0  # Set the creativity level (0.0 for deterministic, higher for more randomness)
+
+   [Kaggle]
+   default_challenge_url = https://www.kaggle.com/c/spaceship-titanic/  # Default Kaggle challenge URL
+
+   [Logging]
+   level = INFO  # Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+   file = kaggle_solver.log  # Log file name
+
+   [Jupyter]
+   server_url = http://127.0.0.1:8888/  # Jupyter server URL
+   # token = your_jupyter_token  # Uncomment and set your Jupyter token if required
+
+   [MongoDB]
+   db_name = challenge_data  # MongoDB database name   ```
+
+   ````
+
+3. Save the file after making your changes.
+
+### Applying Configuration Changes
+
+The configuration is loaded when the Kaggle Problem Solver starts. To apply changes:
+
+1. Stop the current execution of the Kaggle Problem Solver.
+2. Restart the application to load the new configuration.
+
+### Configuration Tips
 
 Customize your config like you're picking toppings for a pizza:
 
