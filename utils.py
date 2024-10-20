@@ -1,104 +1,259 @@
 import json
-import subprocess
-from typing import Any, Dict, List, Union
+import re
+from abc import ABC
+from dataclasses import asdict, dataclass
+from typing import List, Union
+
+import black
+from langchain_core.documents import Document
 
 # from states.main import KaggleProblemState
-from prompts.utils import DATASET_ANALYSIS_PROMPT
-# from task_enhancer import EnhancedTask
+from states.write_challenge_docs import TEXT
 
 
-class VenvExecutionError(Exception):
-    """Custom exception for virtual environment execution errors."""
-    pass
+@dataclass
+class CellOutput:
+    output_type: str
+    name: str
+    text: str
+
+    def to_json(self) -> str:
+        # Convert the dataclass to a dictionary and then to a JSON string
+        return json.dumps(asdict(self))
 
 
-def exec_in_venv(code, venv_path="./.venv"):
-    # Construct the Python command
-    python_executable = f"{venv_path}/bin/python"
+class CellError(Exception):
+    def __init__(self, ename, evalue, traceback):
+        self.ename = ename
+        self.evalue = evalue
+        self.traceback = traceback
 
-    # Use subprocess to run the code in the specified virtual environment
-    process = subprocess.Popen([python_executable, '-c', code],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               text=True)
+    def __repr__(self) -> str:
+        return f"error: {self.ename}"
 
-    # Capture output and errors
-    stdout, stderr = process.communicate()
-
-    # Check if the process executed successfully
-    if process.returncode != 0:
-        error_message = f"Execution failed with return code {process.returncode}.\nStderr: {stderr}"
-        raise VenvExecutionError(error_message)
-
-    return stdout
-
-
-def _get_relevant_previous_code(self, state: 'KaggleProblemState') -> str:
-    relevant_code = []
-    for task, code in state.task_codes_results.items():
-        if self._is_relevant(state.current_task, task):
-            relevant_code.append(f"# Code for task: {self._get_task_description(task)}\n{code}\n")
-    return "\n".join(relevant_code)
+    # @property
+    # def ename(self)->str:
+    #     return self.name
+    # @property
+    # def evalue(self)->str:
+    #     return self.value
+    # @property
+    # def traceback(self)->str:
+    #     return self.traceback_
 
 
-def _get_relevant_previous_results(self, state: 'KaggleProblemState') -> str:
-    relevant_results = []
-    for task, result in state.task_results.items():
-        if self._is_relevant(state.current_task, task):
-            relevant_results.append(f"# Result for task: {self._get_task_description(task)}\n{result}\n")
-    return "\n".join(relevant_results)
+class CellResult:
+    def __init__(self, result):
+        # super().__init__(result_instance.is_main_result,result_instance.extra)
+        self.result = result
+
+    @property
+    def output_str(self) -> str:
+        self.result
+
+    def __str__(self) -> str:
+        return self.result
+
+    # def __repr__(self) -> str:
+    #     return self.result
 
 
-def _is_relevant(self, current_task: Union[str, 'EnhancedTask'], previous_task: Union[str, 'EnhancedTask']) -> bool:
-    current_task_desc = self._get_task_description(current_task)
-    previous_task_desc = self._get_task_description(previous_task)
+class NotebookExecutorInterface(ABC):
+    def create_nb(self) -> str:
+        pass
 
-    current_keywords = set(current_task_desc.lower().split())
-    previous_keywords = set(previous_task_desc.lower().split())
-    return len(current_keywords.intersection(previous_keywords)) > 0
+    def upload_file_env(self):
+        pass
 
+    def __init__(self, execution_instance) -> None:
+        self.executor = None
+        self.is_restarted = False
 
+    def test_and_execute(self, new_code: str) -> CellResult:
+        pass
 
-
-def _format_project_state(self, state: 'KaggleProblemState') -> str:
-    formatted_state = {
-        "dataset_info": state.dataset_info,
-        "previous_tasks": [self._get_task_description(task) for task in state.previous_tasks],
-        "model_info": state.model_info,
-        "evaluation_metric": state.evaluation_metric,
-        "best_score": state.best_score
-    }
-    return str(formatted_state)
+    def reset(self) -> None:
+        pass
 
 
-def _extract_code(self, response: str) -> List[str]:
-    # Simple extraction of code blocks
-    code_blocks = []
-    in_code_block = False
-    for line in response.split('\n'):
-        if line.strip().startswith('```python'):
-            in_code_block = True
-            continue
-        elif line.strip() == '```' and in_code_block:
-            in_code_block = False
-            continue
-        if in_code_block:
-            code_blocks.append(line)
-    return code_blocks
+class NotebookFailError(Exception):
+    """Exception raised for errors in the notebook execution process."""
 
+    def __init__(self, message: str, code: str = None):
+        self.message = message
+        self.code = code
+        super().__init__(self.message)
 
-def _is_code_complete(self, code: str, task: Union[str, 'EnhancedTask']) -> bool:
-    # This is a simplified check. You might want to implement a more sophisticated one.
-    task_desc = self._get_task_description(task).lower()
-    if 'model' in task_desc and 'fit' in code:
-        return True
-    if 'preprocess' in task_desc and 'transform' in code:
-        return True
-    if 'evaluate' in task_desc and 'score' in code:
-        return True
-    # Default to False if we're not sure
-    return False
+    def __str__(self):
+        if self.code:
+            return f"{self.message} (Code: {self.code})"
+        return self.message
 
 
 def dict_concat(a, b):
     return {**a, **b}
+
+
+def cc(s: str):
+    return s.replace("\\n", "\n")
+
+
+def exec2s(data: Union[CellResult, List[CellResult]]) -> str:
+    out_s = ""
+    if isinstance(data, List):
+        out_s = "\n---\n".join(map(str, data))
+        out_s = out_s.replace("\\n", "\n")
+    else:
+        out_s = str(data)
+
+    return out_s
+
+
+def get_top_10_percent_mean(json_path: str) -> float:
+    """
+    Calculate the mean of the top 10 percent score values from the provided JSON schema.
+
+    :param json_path: A string containing the path to the JSON file with score values.
+    :return: The mean of the top 10 percent score values.
+    """
+
+    with open(json_path, "r") as file:
+        json_data = json.load(file)
+
+    submissions = json_data.get("submissions", [])
+    if not submissions:
+        return 0.0
+
+    scores = []
+    for submission in submissions:
+        score_str = submission.get("score")
+        if score_str is not None:
+            try:
+                score = float(score_str)
+                scores.append(score)
+            except ValueError:
+                continue
+
+    if not scores:
+        return 0.0
+
+    scores.sort(reverse=True)
+    top_10_percent_count = max(1, len(scores) // 10)
+    top_10_percent_scores = scores[:top_10_percent_count]
+
+    return sum(top_10_percent_scores) / len(top_10_percent_scores)
+
+
+def append_url(base_url: str, sub_url: str, use_https: bool = True) -> str:
+    """
+    Append a sub URL to a base URL and add the appropriate protocol (http or https).
+
+    :param base_url: The base URL to which the sub URL will be appended.
+    :param sub_url: The sub URL to append to the base URL.
+    :param use_https: Boolean flag to determine whether to use https (default) or http.
+    :return: The complete URL with the appropriate protocol.
+    """
+    protocol = "https://" if use_https else "http://"
+    if not base_url.startswith("http://") and not base_url.startswith("https://"):
+        base_url = protocol + base_url
+    if not base_url.endswith("/"):
+        base_url += "/"
+    return base_url + sub_url
+
+
+def state2doc_write(state) -> str:
+    name = state.challenge_url.split("/")[-2]
+    important_notes = open("./important_notes/important_notes.txt").read()
+    d = {
+        "challenge_name": name,
+        "problem_description": state.problem_description,
+        "quantitative_analysis": state.quantitative_analysis,
+        "qualitative_analysis": state.qualitative_analysis,
+        "dataset_info": state.dataset_info,
+        "evaluation": state.evaluation_metric,
+        "important_notes": important_notes,
+    }
+
+    s = TEXT.format(**d)
+    open("./ongoing/doc.txt", "w").write(s)
+    with open("./ongoing/doc_dict.json", "w") as file:
+        json.dump(d, file)
+    return TEXT.format(**d)
+
+
+def state2retrieve_doc():
+    with open("./ongoing/doc_dict.json") as file:
+        d = json.load(file)
+    data = []
+    for k, v in d.items():
+        data.append(Document(page_content=v, metadata={"source": k}))
+    return data
+
+
+def format_code(code) -> str:
+    """Format Python code using Black."""
+    try:
+        return black.format_str(code, mode=black.FileMode())
+    except black.parsing.InvalidInput:  # type: ignore
+        return code
+
+
+def is_valid_python_script(script):
+    """Check if a script is a valid Python script."""
+    try:
+        compile(script, "<string>", "exec")
+        return True
+    except SyntaxError:
+        return False
+
+
+def extract_code(text):
+    """Extract python code blocks from the text."""
+    parsed_codes = []
+
+    # When code is in a text or python block
+    matches = re.findall(r"```(python)?\n*(.*?)\n*```", text, re.DOTALL)
+    for match in matches:
+        code_block = match[1]
+        parsed_codes.append(code_block)
+
+    # When the entire text is code or backticks of the code block is missing
+    if len(parsed_codes) == 0:
+        matches = re.findall(r"^(```(python)?)?\n?(.*?)\n?(```)?$", text, re.DOTALL)
+        if matches:
+            code_block = matches[0][2]
+            parsed_codes.append(code_block)
+
+    # validate the parsed codes
+    valid_code_blocks = [
+        format_code(c) for c in parsed_codes if is_valid_python_script(c)
+    ]
+    return format_code("\n\n".join(valid_code_blocks))
+
+
+def extract_text_up_to_code(s):
+    """Extract (presumed) natural language text up to the start of the first code block."""
+    if "```" not in s:
+        return ""
+    return s[: s.find("```")].strip()
+
+
+def extract_markdown(text):
+    """Extract markdown content from the text."""
+    parsed_markdown = []
+
+    # Extract content between markdown code blocks
+    matches = re.split(r"```[\s\S]*?```", text)
+
+    for match in matches:
+        # Remove any remaining backticks
+        cleaned_match = re.sub(r"`", "", match)
+        # Remove any remaining Python prompts
+        cleaned_match = re.sub(r"^>>>\s?", "", cleaned_match, flags=re.MULTILINE)
+        # Remove leading/trailing whitespace
+        cleaned_match = cleaned_match.strip()
+
+        if cleaned_match:
+            parsed_markdown.append(cleaned_match)
+
+    return "\n\n".join(parsed_markdown)

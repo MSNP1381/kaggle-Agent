@@ -1,11 +1,12 @@
-import httpx
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
+from typing import Any, Dict, List, Optional
+
 from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 
 from states.main import KaggleProblemState
+from states.memory import MemoryAgent  # Add this import
 
 
 class RePlanDecision(BaseModel):
@@ -17,60 +18,86 @@ class RePlanDecision(BaseModel):
         new_plan (Optional[List[str]]): The new plan if changes are needed, otherwise None.
         reasoning (str): The reasoning behind the decision.
     """
+
     changes_needed: bool = Field(description="Whether changes to the plan are needed")
-    new_plan: Optional[List[str]] = Field(description="The new plan if changes are needed", default=None)
+    new_plan: Optional[List[str]] = Field(
+        description="The new plan if changes are needed", default=None
+    )
     reasoning: str = Field(description="The reasoning behind the decision")
 
 
 class KaggleProblemRePlanner:
-    def __init__(self, config, proxy):
+    def __init__(self, config, llm: ChatOpenAI, memory_agent: MemoryAgent):
         self.config = config
-        self.llm = ChatOpenAI(model="gpt-4o-mini", http_client=proxy, temperature=0)
+        self.llm = llm
         self.output_parser = PydanticOutputParser(pydantic_object=RePlanDecision)
+        self.memory_agent = memory_agent
 
-        self.re_plan_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an AI assistant tasked with re planning a Kaggle machine learning project based on 
-            the latest execution results. Given the current state of the project and the output of the last executed 
-            task, determine if the plan needs to be adjusted.
+        self.re_plan_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    """You are an AI assistant specialized in re-planning machine learning projects for Kaggle competitions. Your objective is to ensure that the project plan remains effective and aligned with the competition goals based on the latest execution results.
 
-            Analyze the execution result carefully and determine if it requires changes to the plan.
-            If changes are needed, provide a new list of planned tasks.
-            If no changes are needed, keep the current plan.
+**Objectives:**
+1. **Alignment:** Ensure the current plan aligns with the overall problem objectives.
+2. **Efficiency:** Identify and address any inefficiencies or bottlenecks in the current workflow.
+3. **Adaptability:** Incorporate new insights or resolve issues highlighted by recent task executions.
 
-            {format_instructions}
+**Process:**
+- **Analyze** the problem description and current project state.
+- **Review** the last executed task and its outcomes.
+- **Assess** the effectiveness of the existing plan.
+- **Decide** whether adjustments are necessary.
+- **Propose** a revised set of tasks if modifications are needed.
 
-            Ensure your response includes a clear decision on whether changes are needed, the reasoning behind your 
-            decision, and a new plan if applicable."""),
-            ("human", """Problem Description:
-            {problem_description}
+{format_instructions}
 
-            Current State:
-            {state}
+**Your response should include:**
+1. **Decision:** Whether the plan needs to be changed.
+2. **Reasoning:** Explanation for your decision.
+3. **New Plan:** A list of revised tasks (if adjustments are required).""",
+                ),
+                (
+                    "human",
+                    """**Problem Description:**
+{problem_description}
 
-            Last executed task: {last_task}
-            Execution result: {execution_result}
+**Current State:**
+{state}
 
-            Current plan:
-            {current_plan}
+**Last Executed Task:**
+{last_task}
 
-            Based on this information, should the plan be changed? If so, what should the new plan be?""")
-        ])
+**Execution Result:**
+{execution_result}
+
+**Current Plan:**
+{current_plan}
+
+**Question:**
+Based on the above information, should the project plan be adjusted? If so, please provide a revised list of tasks.""",
+                ),
+            ]
+        )
 
     def re_plan(self, state: KaggleProblemState) -> List[str]:
-        last_task = state.enhanced_task.task if hasattr(state.enhanced_task, 'task') else str(state.enhanced_task)
-        execution_result = self._get_execution_result(state.task_results, last_task)
-        current_plan = "\n".join(state.planned_tasks)
+        # Get relevant context from memory
+        relevant_context = self.memory_agent.ask(state.problem_description)
 
         response = self.llm.invoke(
             self.re_plan_prompt.format_messages(
                 problem_description=state.problem_description,
                 state=self._format_state_for_prompt(state),
-                last_task=last_task,
-                execution_result=execution_result,
-                current_plan=current_plan,
-                format_instructions=self.output_parser.get_format_instructions()
+                last_task=state.last_task,
+                execution_result=self._get_execution_result(
+                    state.task_codes_results, state.last_task
+                ),
+                current_plan=state.planned_tasks,
+                format_instructions=self.output_parser.get_format_instructions(),
+                relevant_context="\n".join(relevant_context),
             ),
-            config=self.config
+            config=self.config,
         )
 
         try:
@@ -83,21 +110,22 @@ class KaggleProblemRePlanner:
             print(f"Error parsing replanner output: {e}")
             return state.planned_tasks  # Fall back to current plan if parsing fails
 
-    def _get_execution_result(self, task_results: Dict[str, Any], task_name: str) -> str:
+    def _get_execution_result(
+        self, task_results: Dict[str, Any], task_name: str
+    ) -> str:
         for key, value in task_results.items():
             if isinstance(key, str) and key == task_name:
                 return str(value)
-            elif hasattr(key, 'task') and key.task == task_name:
+            elif hasattr(key, "task") and key.task == task_name:
                 return str(value)
         return "No result available"
 
-    def _format_state_for_prompt(self, state: 'KaggleProblemState') -> str:
+    def _format_state_for_prompt(self, state: "KaggleProblemState") -> str:
         formatted_state = {
             "dataset_info": state.dataset_info,
             "previous_tasks": state.previous_tasks,
-            "model_info": state.model_info,
+            "modelInfo": state.modelInfo,
             "evaluation_metric": state.evaluation_metric,
-            "best_score": state.best_score
+            "best_score": state.best_score,
         }
         return str(formatted_state)
-

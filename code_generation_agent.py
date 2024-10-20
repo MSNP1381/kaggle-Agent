@@ -1,205 +1,424 @@
-from langchain_openai import ChatOpenAI
-from langgraph.graph import END, StateGraph, START
+import json
+import logging
+import os
+import re
 from typing import List, TypedDict
-from langchain.output_parsers import PydanticOutputParser
+
+from injector import inject
+from langchain_core.output_parsers.string import StrOutputParser
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, StateGraph
+from pydantic import BaseModel, Field
+
+from prompts.code_generation_prompt import (
+    DEBUGGING_PROMPT,
+    IMPROVED_CODE_GEN_PROMPT,
+    NEW_SOLUTION_PROMPT,
+    pkg_str,
+)
+from states.code import Code
 from states.enhancer import EnhancedTask
 from states.main import KaggleProblemState
-from nbexecutor import NBExecutor
-from prompts.code_generatino_prompt import SIMPLIFIED_CODE_GEN_PROMPT
-from states.main import Code
+from states.memory import MemoryAgent
+from utils import (
+    CellError,
+    NotebookExecutorInterface,
+    NotebookFailError,
+    exec2s,
+    extract_code,
+    extract_text_up_to_code,
+)
+
+# Initialize logging
+
+logger = logging.getLogger(__name__)
 
 
-class GraphState(TypedDict):
+class DebugCode(BaseModel):
+    debug_analysis: str = Field(description="Debug analysis for code generation")
+
+    suggested_fix: str = Field(description="Suggested fix for code generation")
+
+
+def remove_color(text: str) -> str:
+    """
+
+    Clean the text by removing ANSI color codes, escape sequences, and other special characters.
+
+    This function is particularly useful for cleaning stdout and error messages from Python exceptions.
+
+
+    Args:
+
+        text (str): The input text to clean.
+
+
+    Returns:
+
+        str: The cleaned text.
+    """
+
+    # Remove ANSI escape sequences
+
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+    text = ansi_escape.sub("", text)
+
+    # Remove other escape sequences
+
+    text = re.sub(r"\x1b\[\d+;\d+m", "", text)
+
+    text = re.sub(r"\x1b\[\d+m", "", text)
+
+    # Remove backspace characters
+
+    text = re.sub(r"\b", "", text)
+
+    # Remove carriage returns and line feeds
+
+    text = text.replace("\r", "").replace("\n", " ")
+
+    # Remove extra whitespace
+
+    text = " ".join(text.split())
+
+    return text
+
+
+class GeneratedCode(BaseModel):
+    """Code output"""
+
+    code: str = Field(description="The imports and code")
+
+    def __str__(self) -> str:
+        return self.code
+
+
+class CodeGraphState(TypedDict):
     error: str
-    messages: List
-    generation: Code
+
+    error_name: str
+
+    error_msg: str
+
+    generation: GeneratedCode
+
     iterations: int
-    context: str
-    enhanced_task:EnhancedTask
+
+    kaggle_state: KaggleProblemState
+
+    result: str
+
+    messages: List
+
+    analysis: str
+
+    suggested_fix: str
+
 
 class CodeGenerationAgent:
+    @inject
     def __init__(
         self,
+        llm: ChatOpenAI,
         config,
-        proxy,
-        nb_executor: NBExecutor,
+        # proxy,
+        nb_executor: NotebookExecutorInterface,
+        memory_agent: MemoryAgent,
         model="gpt-4o-mini",
-        max_iterations=3,
+        max_iterations=1,
     ):
+        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
+
+        # self.proxy = proxy
+
         self.max_iterations = max_iterations
+
         self.config = config
+
         self.nb_executor = nb_executor
-        self.llm = ChatOpenAI(model=model, http_client=proxy, temperature=0)
-        self.code_gen_prompt = SIMPLIFIED_CODE_GEN_PROMPT
-        self.output_parser = PydanticOutputParser(pydantic_object=Code)
-        self.format_instructions = self.output_parser.get_format_instructions()
-        self.code_gen_chain = self.code_gen_prompt | self.llm | self.output_parser
+
+        self.code_gen_prompt = IMPROVED_CODE_GEN_PROMPT
+
+        # self.output_parser = PydanticOutputParser(pydantic_object=GeneratedCode)
+
+        self.output_parser = StrOutputParser()
+        # self.format_instructions = self.output_parser.get_format_instructions()
+
+        self.llm_raw = llm
+
+        # self.llm_raw = llm.bind_tools(
+        #     tools=[submit_to_kaggle],
+        # )
+
+        self.uploaded = False
+
+        self.code_gen_chain = self.code_gen_prompt | self.llm_raw | self.output_parser
+
         self.workflow = self.create_workflow()
 
-    def generate(self, state: GraphState):
-        print("---GENERATING CODE SOLUTION---")
-        messages = state["messages"]
-        iterations = state["iterations"]
-        error = state["error"]
+        self.memory_agent = memory_agent
 
-        if error == "yes":
-            messages.append(
-                (
-                    "human",
-                    "The previous solution had errors. Please try again, ensuring all imports are correct and the "
-                    "code is executable.",
-                )
+        self.debugging_prompt = DEBUGGING_PROMPT
+        self.new_solution_prompt = NEW_SOLUTION_PROMPT
+
+        # Define the OpenAI function for Kaggle submission
+
+        # Add the Kaggle submission function to the LLM's available functions
+
+    def add_init_code(self, state: CodeGraphState):
+        if len(state["kaggle_state"].task_codes_results) == 0:
+            init_code = [
+                "import pandas as pd",
+                "import numpy as np",
+                "train_df = pd.read_csv('./input/train.csv')",
+                "test_df = pd.read_csv('./input/test.csv')",
+            ]
+            prep_code = "\n".join(init_code)
+            self.nb_executor.test_and_execute(prep_code)
+            enhanced_task = EnhancedTask(
+                final_answer="load data from input dricrtory",
             )
+            init_code_obj = Code(imports="", code=prep_code, description="")
 
-        human_message = messages[-1][1]  # Get the latest human message
-        code_solution = self.code_gen_chain.invoke(
+            state["kaggle_state"].task_codes_results.append(
+                (enhanced_task, init_code_obj, "")
+            )
+            state["kaggle_state"].enhanced_tasks.append(enhanced_task)
+            state["kaggle_state"].index += 1
+
+    def choose_base_prompt(self, state: CodeGraphState):
+        if state.get("error") == "yes":
+            if state["iterations"] <= 1:
+                return self.debugging_prompt
+            else:
+                return self.new_solution_prompt
+        else:
+            return self.code_gen_prompt
+
+    def generate_code(self, state: CodeGraphState) -> CodeGraphState:
+        logger.info("---GENERATING OR DEBUGGING CODE SOLUTION---")
+
+        kaggle_state = state["kaggle_state"]
+        iterations = state["iterations"]
+        messages = state["messages"]
+        current_task = str(kaggle_state.enhanced_tasks[kaggle_state.index - 1])
+
+        # Get context and examples
+        relevant_context = self.memory_agent.ask_docs(current_task)
+        few_shots_examples = json.dumps(
+            self.memory_agent.get_few_shots(current_task), indent=2
+        )
+        logger.info(f"Few shots examples: {str(few_shots_examples)[:100]}...")
+
+        evaluation_metric = kaggle_state.evaluation_metric
+        planned_tasks = kaggle_state.get_planned_tasks()
+
+        # Choose the appropriate base prompt
+        base_prompt = self.choose_base_prompt(state)
+
+        # Add error information to messages if there was an error
+        if state.get("error") == "yes":
+            error_type = self.categorize_error(state["error_msg"])
+            error_message = f"Error Type: {error_type}\nError Message: {state['error_msg']}\nPlease focus on fixing this error in your next code generation."
+            messages.append(("human", error_message))
+
+        # Generate code
+        code_solution: str = (base_prompt | self.llm_raw | self.output_parser).invoke(
             {
-                **state["context"],
-                "current_task": human_message,
-                "format_instructions": self.format_instructions,
+                "pkg_str": pkg_str,
+                "problem_description": kaggle_state.problem_description,
+                "current_task": current_task,
+                "evaluation_metric": evaluation_metric,
+                "planned_tasks": planned_tasks,
+                "previous_tasks": state["kaggle_state"].get_previous_result(2),
+                "relevant_context": relevant_context,
+                "messages": messages,
+                "previous_codes": kaggle_state.get_executed_codes(5),
+                "few_shots_examples": few_shots_examples,
+                "current_code": str(state.get("generation", "")),
+                "error_msg": state.get("error_msg", ""),
             },
             config=self.config,
         )
 
-        # Ensure all fields are present in the Code object
-        code_solution_dict = code_solution.dict()
-        for field in ["imports", "code", "description"]:
-            if field not in code_solution_dict or code_solution_dict[field] is None:
-                code_solution_dict[field] = ""  # Set to empty string if missing
+        code_exp = extract_code(code_solution)
+        explanation = extract_text_up_to_code(code_solution)
+        code_solution = GeneratedCode(code=code_exp)
 
-        code_solution = Code(**code_solution_dict)
+        logger.info("Generated code solution:")
+        logger.debug(explanation)
 
-        messages.append(
-            (
-                "assistant",
-                f"Imports:\n{code_solution.imports}\nCode:\n{code_solution.code}\nDescription:\n{code_solution.description}",
-            )
-        )
-
-        iterations += 1
         return {
             "generation": code_solution,
-            "messages": messages,
-            "iterations": iterations,
+            "iterations": iterations + 1,
+            "messages": messages + [("assistant", explanation)],
+            "explanation": explanation,
         }
 
-    def code_check(self, state: GraphState):
-        print("---CHECKING CODE---")
-        messages = state["messages"]
+    def execute_code(self, state: CodeGraphState) -> CodeGraphState:
+        logger.info("---EXECUTING CODE---")
+
         code_solution = state["generation"]
         iterations = state["iterations"]
 
-        imports = code_solution.imports
-        code = code_solution.code
-
         try:
-            self.nb_executor.test_and_execute(imports)
-            self.nb_executor.test_and_execute(imports + "\n" + code)
+            result = self.nb_executor.test_and_execute(str(code_solution))
+            logger.info(" OOOO ---CODE EXECUTed Successfully :---  OOOO")
 
-            print("---NO CODE TEST FAILURES---")
             return {
-                "generation": code_solution,
-                "messages": messages,
-                "iterations": iterations,
+                **state,
+                "result": remove_color(exec2s(result)),
                 "error": "no",
+                "iterations": iterations + 1,
+                "messages": [],
             }
-        except Exception as e:
-            print(f"---CODE CHECK FAILED: {str(e)}---")
-            error_message = [
-                ("human", f"Your solution failed with the following error: {str(e)}")
-            ]
-            messages += error_message
+
+        except CellError as e:
+            logger.error(f"XXX ---CODE EXECUTION FAILED: {e.evalue}--- XXXX")
+
             return {
-                "generation": code_solution,
-                "messages": messages,
-                "iterations": iterations,
+                **state,
                 "error": "yes",
+                "error_msg": remove_color(exec2s(e.evalue)),
+                "error_name": remove_color(exec2s(e.ename)),
+                "iterations": iterations + 1,
+                "messages": [],
             }
 
-    def decide_to_finish(self, state: GraphState):
-        error = state["error"]
-        iterations = state["iterations"]
+    def debug_code(self, state: CodeGraphState) -> CodeGraphState:
+        logger.info("---DEBUGGING OR GENERATING NEW SOLUTION---")
 
-        if error == "no" or iterations == self.max_iterations:
-            print("---DECISION: FINISH---")
-            return "end"
+        error_msg = state["error_msg"]
+        current_code = str(state["generation"])
+        current_task = str(
+            state["kaggle_state"].enhanced_tasks[state["kaggle_state"].index]
+        )
+        previous_code = state["kaggle_state"].get_executed_codes(2)
+
+        # Categorize the error
+        error_type = self.categorize_error(error_msg)
+
+        # Decide whether to debug or generate a new solution
+        if state["iterations"] <= 1 and error_type != "critical":
+            approach = "debug"
         else:
-            print("---DECISION: RE-TRY SOLUTION---")
-            return "generate"
+            approach = "new_solution"
+
+        prompt = self.create_prompt(
+            approach, error_type, current_task, error_msg, current_code, previous_code
+        )
+
+        response = self.llm_raw.invoke(prompt)
+
+        if approach == "debug":
+            code = extract_code(self.output_parser.invoke(response))
+            explanation = extract_text_up_to_code(response)
+            return {
+                **state,
+                "fixed_code": code,
+                "error": "yes",
+                "messages": [],
+                "debug_explanation": explanation,
+            }
+        else:
+            new_solution = extract_code(self.output_parser.invoke(response))
+            return {
+                **state,
+                "generation": GeneratedCode(code=new_solution),
+                "error": "no",
+                "messages": [],
+            }
+
+    def categorize_error(self, error_name: str) -> str:
+        # Implement error categorization logic
+        # This could use regex patterns or ML techniques to classify errors
+        # For now, we'll use a simple placeholder implementation
+        if "syntax" in error_name.lower():
+            return "syntax"
+        elif "runtime" in error_name.lower():
+            return "runtime"
+        elif "value" in error_name.lower():
+            return "value"
+        else:
+            return "unknown"
+
+    def create_prompt(
+        self,
+        approach: str,
+        error_type: str,
+        current_task: str,
+        error_msg: str,
+        current_code: str,
+        previous_code: str,
+    ) -> str:
+        # Implement prompt creation logic based on the approach and error type
+        pass
 
     def create_workflow(self):
-        workflow = StateGraph(GraphState)
+        workflow = StateGraph(CodeGraphState)
 
-        # workflow.add_node("start_generate", self.generate_code)
-        workflow.add_node("generate", self.generate)
-        workflow.add_node("check_code", self.code_check)
-        # workflow.add_node("conv_result", self._conv)
+        workflow.add_node("generate_code", self.generate_code)
 
-        # workflow.add_edge(START, "start_generate")
-        workflow.add_edge(START, "generate")
-        workflow.add_edge("generate", "check_code")
+        workflow.add_node("execute_code", self.execute_code)
+
+        # workflow.add_node("debug_code", self.debug_code)
+
+        # workflow.add_node("analyze_error", self.analyze_error)
+
+        workflow.add_edge("generate_code", "execute_code")
+
+        # workflow.add_edge("debug_code", "execute_code")
+
+        workflow.set_entry_point("generate_code")
+
+        def decide(x: CodeGraphState):
+            if x["error"] == "yes" and x["iterations"] > self.max_iterations:
+                raise NotebookFailError(x["error_msg"], str(x["generation"]))
+            if x["error"] == "yes" and x["iterations"] <= self.max_iterations:
+                return "debug_code"
+            else:
+                return END
+
         workflow.add_conditional_edges(
-            "check_code",
-            self.decide_to_finish,
+            "execute_code",
+            decide,
             {
-                "end": END,
-                "generate": "generate",
+                "debug_code": "generate_code",
+                END: END,
             },
         )
-        # workflow.add_edge("conv_result", END)
 
         return workflow.compile()
-    # @staticmethod
-    def kaggle_conv_code( self,state: KaggleProblemState) :
-        # self.task = state.enhanced_task
-        context = {
-            "problem_description": state.problem_description,
-            "project_state": {
-                "dataset_info": state.dataset_info,
-                "current_task": state.current_task,
-                "previous_tasks": state.previous_tasks,
-                "task_codes": state.task_codes_results,
-                # "task_results": state.task_results,
-                "model_info": state.model_info,
-                "planned_tasks": state.planned_tasks,
-                "evaluation_metric": state.evaluation_metric,
-                "best_score": state.best_score,
-            },
-            "task_code_pairs": [
-                {"task": task, "code": state.task_codes_results[task]}
-                for task in state.previous_tasks
-            ],
-        }
 
+    def __call__(self, state: KaggleProblemState, temp=0, max_iterations=1):
         initial_state = {
-            "messages": [("human", state.enhanced_task.task)],
+            "kaggle_state": state,
             "iterations": 0,
-            "context": context,
+            "generation": GeneratedCode(code=""),
+            "messages": [],
             "error": "no",
-            "enhanced_task":state.enhanced_task,
-            "generation": Code(
-                imports="", code="", description=""
-            ),  # Initialize with empty Code
+            "error_msg": "",
         }
-        # return initial_state
+
+        self.max_iterations = max_iterations
+
+        # Update these lines
+        self.llm_raw = self.llm_raw.with_config(temperature=temp)
+        self.code_gen_chain = self.code_gen_chain.with_config(temperature=temp)
+
+        self.add_init_code(initial_state)
         result = self.workflow.invoke(initial_state, config=self.config)
-        # return result["generation"]
-        return {"task_codes_results": {state.enhanced_task.task: (result["generation"], "")}}
-        
 
-    def _conv(self, state):
-        # code = self.generate_code(state)
-        # state.task_codes_results[state.enhanced_task.task] = (code, '')
-        print("****--"*10)
-        print({"task_codes_results": {self.task.task: (state["generation"], "")}})
-        
-        return {"task_codes_results": {self.task.task: (state["generation"], "")}}
+        task_codes = state.task_codes_results
+        task_code_new = (
+            state.enhanced_tasks[state.index],
+            Code(imports="", code=result["generation"].code, description=""),
+            str(result.get("result", "")),
+        )
+        task_codes.append(task_code_new)
+        self.memory_agent.add_example(*map(str, task_code_new))
 
-    def __call__(self, state: KaggleProblemState):
-
-        return self.kaggle_conv_code(state)
-    #     state.task_codes_results[state.enhanced_task.task] = (code, "")
-
-    #     return {"task_codes_results": state.task_codes_results}
-
-    # return self.generate_code(state)
+        return {
+            "task_codes_results": task_codes,
+        }

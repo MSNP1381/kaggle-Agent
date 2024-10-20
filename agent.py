@@ -1,162 +1,201 @@
-import json
-import time
-import httpx
-from langgraph.graph import StateGraph, START, END
-from code_generation_agent import CodeGenerationAgent
-from nbexecutor import NBExecutor
-from planner_agent import KaggleProblemPlanner
-from replanner import KaggleProblemRePlanner
-from executor_agent import KaggleCodeExecutor
-from dotenv import load_dotenv
+#!/home/msnp/miniconda3/envs/kaggle_agent/bin/python
+import argparse
 import os
-from langfuse.callback import CallbackHandler
+import time
+
+import kaggle
+from dotenv import load_dotenv
+from injector import inject
+from langgraph.graph import END, START, StateGraph
+from pymongo import MongoClient
+
+from code_manager import KaggleCodeManager
+from data_utils import DataUtils
+from di_container import create_injector
+from executors.nbexecutor_jupyter import JupyterExecutor
+from kaggle_scraper import ScrapeKaggle
+from persistence.mongo import MongoDBSaver
+
+# from planner_agent import KaggleProblemPlanner
+from planner_agent import KaggleProblemPlanner
+
+# from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
 from task_enhancer import KaggleTaskEnhancer
-# from states.
-from datautils import KaggleDataUtils
 
 
 class KaggleProblemSolver:
-    def __init__(self, config, proxy):
+    @inject
+    def __init__(
+        self,
+        config: dict,
+        # proxy: httpx.Client,
+        client: MongoClient,
+        nb_executor: JupyterExecutor,
+        scraper: ScrapeKaggle,
+        planner: KaggleProblemPlanner,
+        # re_planner: KaggleProblemRePlanner,
+        code_manager: KaggleCodeManager,
+        enhancer: KaggleTaskEnhancer,
+        data_utils: DataUtils,
+        # handler: CallbackHandler,
+    ):
         self.config = config
-        print(os.getenv("HTTP_PROXY_URL"))
-        print("---" * 10)
-        self.proxy = proxy
-        self.nb_executor = NBExecutor()
-        self.code_agent = CodeGenerationAgent(config, proxy=proxy, nb_executor=self.nb_executor)
-        self.planner = KaggleProblemPlanner(config, proxy=proxy, )
-        self.re_planner = KaggleProblemRePlanner(config, proxy=proxy)
-        self.executor = KaggleCodeExecutor(self.nb_executor)
-        self.enhancer = KaggleTaskEnhancer(config, proxy=proxy)
-        self.data_utils = KaggleDataUtils(config, proxy)
-        # self._init_state()
+        # self.proxy = proxy
+        self.client = client
+        self.nb_executor = nb_executor
+        self.scraper = scraper
+        self.planner = planner
+        # self.re_planner = re_planner
+        self.code_manager = code_manager
+        self.enhancer = enhancer
+        self.data_utils = data_utils
+        # self.handler = handler
 
-    def _init_state(self):
-        self.dataset_path = "./house_prices.csv"
-        self.problem_description = f"""
-    Predict house prices based on various features.
-    The evaluation metric is Root Mean Squared Error (RMSE).
-    The dataset contains information about house features and their corresponding sale prices.
-    dataset file name is : "{self.dataset_path}"
-    """
+    def _init_state(self, url: str):
+        self.dataset_path = "./ongoing/train.csv"
+        self.test_dataset_path = "./ongoing/test.csv"
 
-        return {
-            'problem_description': self.problem_description,
-            'dataset_path': self.dataset_path,
-        }
-
-        # dataset_path = "house_prices.csv"  # Replace with actual path
+        return KaggleProblemState(
+            **{
+                # "file_env_var": env_var,
+                "challenge_url": url,
+                "dataset_path": self.dataset_path,
+            }
+        )
 
     def is_plan_done(self, state: KaggleProblemState):
-        if not state.planned_tasks:
+        # print("******************" * 2)
+        # print("\n\n")
+        # print("planned task no is:")
+        # print(state.planned_tasks.__len__())
+        # if state.planned_tasks.__len__() < 2 or True:
+        #     print(*state.planned_tasks, sep="**\n\n")
+        # print("\n\n")
+        # print("******************" * 2)
+        print(
+            "********tot_Iter**********\n\n         ",
+            state.index + 1,
+            "/",
+            len(state.planned_tasks),
+            "\n\n**************************",
+        )
+        if state.index == len(state.planned_tasks) - 1:
+            # return END
             return END
-        return 'enhancer'
+        return "enhancer"
 
-    def compile(self):
+    def compile(self, checkpointer):
         graph_builder = StateGraph(KaggleProblemState)
-        graph_builder.add_node("code_agent", self.code_agent)
+        graph_builder.add_node("scraper", self.scraper)
+        graph_builder.add_node("code_manager", self.code_manager)
         graph_builder.add_node("planner", self.planner)
         # graph_builder.add_node("re_planner", self.re_planner)
-        graph_builder.add_node("executor", self.executor)
+        # graph_builder.add_node("executor", self.executor)
         graph_builder.add_node("enhancer", self.enhancer)
         graph_builder.add_node("data_utils", self.data_utils)
 
-        graph_builder.add_edge(START, "data_utils")
-        graph_builder.add_edge('data_utils', "planner")
-        graph_builder.add_edge('planner', "enhancer")
+        graph_builder.add_edge(START, "scraper")
+        graph_builder.add_edge("scraper", "data_utils")
+        graph_builder.add_edge("data_utils", "planner")
+        graph_builder.add_edge("planner", "enhancer")
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
-        
-        graph_builder.add_edge("enhancer", "code_agent")
-        graph_builder.add_edge("code_agent", "executor")
-        graph_builder.add_conditional_edges("executor", self.is_plan_done,path_map={
-            END:END,
-            'enhancer':'enhancer'
-        })
-        self.graph=graph_builder.compile()
-        return self.graph
-    def invoke(self):
-        state=self._init_state()
-        # self.graph.astream_log
-        return self.graph.invoke(state,config=self.config,debug=True)
-        
-        #
-    # def replan(self,state: KaggleProblemState):
-    #
 
-    #
-    # def solve_problem(self, problem_description: str, dataset_path: str):
-    #
-    #     # Initial planning
-    #     initial_plan = self.planner.plan(state)
-    #     state.update_planned_tasks(initial_plan)
-    #
-    #     # Main execution loop
-    #     while state.planned_tasks:
-    #         task = state.planned_tasks.pop(0)
-    #         state.update_task(task)
-    #
-    #         # Use the mediator to process the task
-    #         result = self.mediator.process_task(task, state)
-    #
-    #         # Update state based on the result
-    #         if 'code' in result:
-    #             state.add_code(task, result['code'])
-    #         if 'output' in result:
-    #             state.add_result(task, result['output'])
-    #
-    #             # Update best score if applicable
-    #             if isinstance(result['output'], dict) and 'score' in result['output']:
-    #                 state.update_best_score(result['output']['score'])
-    #
-    #         # Replan after each task
-    #         new_plan = self.replanner.replan(state)
-    #         state.update_planned_tasks(new_plan)
-    #
-    #         print(f"Executed task: {task}")
-    #         print(f"Updated plan: {state.planned_tasks}")
-    #         print("---")
-    #
-    #     return state
-    #
+        graph_builder.add_edge("enhancer", "code_manager")
+        # graph_builder.add_edge("code_agent", "en")  # Connect code_agent to submission_node
+        # graph_builder.add_edge("submission_node", "executor")
+        graph_builder.add_conditional_edges(
+            "code_manager",
+            self.is_plan_done,
+            path_map={"enhancer": "enhancer", END: END},
+        )
+
+        # memory = SqliteSaver.from_conn_string(":memory:")
+
+        self.graph = graph_builder.compile(checkpointer=checkpointer)
+        return self.graph
+
+    def invoke(self, url: str, debug=False):
+        state = self._init_state(url)
+
+        return self.graph.invoke(state, config=self.config, debug=debug)
+
+    def submit_to_kaggle(self, competition: str, submission_file: str, message: str):
+        """
+        Submits the specified file to the given Kaggle competition and retrieves the result.
+
+        :param competition: The name of the Kaggle competition.
+        :param submission_file: The path to the submission file.
+        :param message: The submission message.
+        :return: The result of the submission.
+        """
+        # Submit the file to the competition
+        print(f"Submitting {submission_file} to {competition} with message: {message}")
+        kaggle.api.competition_submit(submission_file, message, competition)
+
+        # Retrieve the submission result
+        submissions = kaggle.api.competition_submissions(competition)
+        latest_submission = max(submissions, key=lambda x: x["date"])
+        print(f"Latest submission result: {latest_submission}")
+
+        return latest_submission
 
 
 # Example usage
 if __name__ == "__main__":
-    print(".env loaded:", load_dotenv())
+    print(".env loaded:", load_dotenv(override=True))
 
-    proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
-
-    langfuse_handler = CallbackHandler(
-        # httpx_client="",
-        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-        secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-        host=os.getenv("LANGFUSE_HOST"),
-        session_id=f"session-{int(time.time())}"
+    parser = argparse.ArgumentParser("kaggle_scraper")
+    parser.add_argument(
+        "--url",
+        help="url to challenge",
+        type=str,
+        required=False,
+        default="https://www.kaggle.com/competitions/nlp-getting-started/",
     )
-    # r=KaggleProblemState()
-    config = {"callbacks": [langfuse_handler]}
-    solver = KaggleProblemSolver(config, proxy)
-    graph=solver.compile()
-    t=graph.get_graph(xray=2).draw_mermaid_png(output_file_path="agentVis.png")
-    with open("x.txt",'w') as f:
-        f.write(t)
-    # exit()
-    # exit()
-    res=solver.invoke()
-    print(res)
-    
-    # problem_description = """
-    # Predict house prices based on various features.
-    # The evaluation metric is Root Mean Squared Error (RMSE).
-    # The dataset contains information about house features and their corresponding sale prices.
-    # data set file name is : "./house_prices.csv"
-    # """
-    # data_set_path = "./generated_notebooks/house_prices.csv"
+    parser.add_argument(
+        "--cached",
+        help="use cached version",
+        type=bool,
+        required=False,
+    )
+    args = parser.parse_args()
+    # proxy = httpx.Client(proxy=os.getenv("HTTP_PROXY_URL"))
+    proxy = None
+    session_id = f"session-{int(time.time())}"
+    # langfuse_handler = CallbackHandler(
+    #     public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+    #     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+    #     host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
+    #     session_id=session_id,
+    # )
 
-    # dataset_path = "house_prices.csv"  # Replace with actual path
+    client = MongoClient(
+        host=os.getenv("MONGO_HOST"), port=int(os.getenv("MONGO_PORT"))
+    )
+    checkpointer = MongoDBSaver(client, db_name="checkpoints")
 
-    # state_init = KaggleProblemState(problem_description=problem_description)
+    config = {
+        "configurable": {"thread_id": session_id},
+        # "callbacks": [
+        #     langfuse_handler,  # handler_1,handler_2
+        # ],
+        "recursion_limit": 50,
+        "checkpointer": checkpointer,
+    }
+    injector, app_module = create_injector()
+    solver = injector.get(KaggleProblemSolver)
+    graph = solver.compile(checkpointer)
+    result = solver.invoke(args.url, debug=args.cached)
 
-    # final_state = solver.solve_problem(problem_description, dataset_path)
-    print(f"Best score achieved: {res.best_score}")
-    print(f"Final model info: {res.model_info}")
+    # Configuration for submission
+    submission_config = {
+        "competition": "nlp-getting-started",
+        "submission_file": "path/to/your/submission.csv",
+        "submission_message": "My first submission",
+    }
+
+    # Invoke the submission node
+    state = result  # Assuming `invoke` returns the current state
+    submission_result = solver.submission_node.run(state, submission_config)
+    print(submission_result)
