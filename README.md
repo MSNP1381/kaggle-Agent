@@ -2,15 +2,7 @@
 
 > Note that because of nature of project it could be very dependant to iterarions and no plan is strait forward for this type of projects.
 
-## TODO
-
-- [x] Add Dockerization for code Executor
-- [x] Explainablity
-- [x] Logging
-- [x] Getting formatted evaluation and code execution result without execution
-- [ ] adding code generation to graph
-- [x] add re planner to cycle
-- [x] revision tasks
+---
 
 ## 🌟 Overview
 
@@ -26,7 +18,7 @@ Welcome to the Kaggle Problem Solver, the Swiss Army knife of machine learning c
 
 ## 🔄 Workflow: The Circle of AI Life
 
-1. Plan → 2. Enhance → 3. Code → 4. Execute → 5. Re-Plan → Repeat!
+1. Plan →( 2. Enhance → 3. Code → 4. Execute )→ Repeat!
 
 It's like a never-ending dance party, but with more algorithms and less awkward small talk.
 
@@ -52,8 +44,7 @@ graph TB
     D --> F[Enhancer]
     F --> C[Code Agent]
     C --> E[Executor]
-    E -.-> F
-    E -.-> H((Finish))
+    H((Finish))
 
     subgraph Code_Agent_Process [Code Agent Process]
         style Code_Agent_Process fill:#cfc,stroke:#333,stroke-width:1px
@@ -89,7 +80,7 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
 1. Clone this repo faster than you can say "git":
 
    ```
-   git clone https://github.com/msnp1381/kaggle-problem-solver.git
+   git clone https://github.com/msnp1381/kaggle-agent.git
    ```
 
 2. Start the required services using Docker Compose:
@@ -141,19 +132,13 @@ config = {
 2. Integrate them into `agent.py` – it's like introducing your new friends to your old crew.
 3. Update `KaggleProblemSolver` to include your new agent in the coolest workflow in town.
 
-## 📊 Visualization Suggestions: Make It Pop
-
-Why stop at one graph when you can have a whole gallery? Here are some ideas to make your project visually stunning:
-
-1. **The Task Lifecycle Rollercoaster**: Show a task's journey from boring idea to ML masterpiece!
-2. **The Metrics Dashboard of Dreams**: Real-time stats that would make any data viz enthusiast weep with joy.
-3. **Code Generation: The Movie**: Animate your code generation process. It's like watching a blockbuster, but with more semicolons.
-4. **The Interactive Notebook of Wonders**: Let users play with your notebooks. It's like Jupyter, but cooler.
-5. **The Dependency Web**: Show how your tasks are connected. It's like LinkedIn, but for algorithms.
-
 ## 🤝 Contributing: Join the AI Party
 
 Got ideas? We want them! Check out `CONTRIBUTING.md` for how to join our merry band of AI enthusiasts. Remember, in this repo, there are no bad ideas, only "learning opportunities"!
+
+## 📱 Join Our Community: Telegram Group
+
+Stay connected and collaborate with fellow enthusiasts in our Telegram group: [Join here](https://t.me/AutonomousLLMS)
 
 ## 📜 License
 
@@ -161,4 +146,115 @@ This project is licensed under the MIT License - see the `LICENSE` file for deta
 
 ---
 
-Remember, in the world of Kaggle Problem Solving, the only limit is your imagination (and maybe your GPU's memory)! Happy coding, and may the algorithms be ever in your favor! 🎉
+## 🧠 Memory System: The Brain Behind the AI
+
+Our Kaggle Problem Solver comes equipped with a sophisticated memory system that acts as the brain of our AI, allowing it to learn, adapt, and make informed decisions throughout the problem-solving process. Here's how it works:
+
+### Memory Components
+
+1. **Short-Term Memory**:
+
+   - Stores recent interactions and important information
+   - Uses a weighted system to prioritize crucial data
+   - Helps maintain context during the problem-solving process
+
+2. **Long-Term Memory**:
+
+   - Utilizes Chroma, a vector database, for efficient storage and retrieval
+   - Stores documents, code snippets, and execution results
+   - Enables semantic search for relevant information
+
+3. **Examples Memory**:
+   - Stores successful task executions (task, code, result)
+   - Used for few-shot learning and providing relevant examples
+
+### Key Features and Usage
+
+#### 1. Dynamic Summarization
+
+The memory agent continuously updates a summary of the project's progress:
+
+```python
+updated_summary = memory_agent.update_summary(task, code, result)
+```
+
+#### 2. Contextual Question Answering
+
+Combines short-term and long-term memory for informed responses:
+
+```python
+answer = memory_agent.ask("What are the key points of the challenge?")
+```
+
+#### 3. Semantic Search
+
+Finds relevant information based on meaning, not just keywords:
+
+```python
+relevant_docs = memory_agent.search_documents("AI advancements", doc_type="tech_report")
+```
+
+#### 4. Few-Shot Learning
+
+Retrieves similar examples to guide new task executions:
+
+```python
+few_shot_examples = memory_agent.get_few_shots(task, n=4)
+```
+
+#### 5. Document Management
+
+Adds and retrieves documents with metadata:
+
+```python
+doc_id = memory_agent.add_document("Document content", "doc_type", {"metadata": "value"})
+document = memory_agent.load_document(doc_id)
+```
+
+#### 6. Short-Term Memory Management
+
+Adds important information to short-term memory with priority:
+
+```python
+memory_agent.add_to_short_term_memory("Important info", importance=1.5)
+```
+
+### Usage in Key Components
+
+#### Code Generation Agent
+
+```python
+# Retrieve relevant examples
+few_shot_examples = memory_agent.get_few_shots(current_task, n=4)
+
+# Access documentation
+relevant_docs = memory_agent.search_documents(query, doc_type="documentation")
+
+# Maintain context
+memory_agent.add_to_short_term_memory(f"Generated code: {code}", importance=1.5)
+
+# Add executed task to examples
+memory_agent.add_example(task, code, result)
+```
+
+#### Planner
+
+```python
+# Initialize document retrieval
+memory_agent.init_doc_retrieve()
+
+# Access challenge information
+challenge_info = memory_agent.ask(f"What are the key points of the {challenge_name} challenge?")
+```
+
+#### Task Enhancer
+
+```python
+# Retrieve relevant context
+relevant_context = memory_agent.ask_docs(current_task)
+
+# Add enhanced task to memory
+memory_agent.add_to_short_term_memory(str(enhanced_task))
+```
+
+By leveraging this powerful memory system across all components, our Kaggle Problem Solver becomes more than just a code generator – it's a learning, adapting, and evolving AI partner in your machine learning journey!

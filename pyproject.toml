@@ -1,7 +1,7 @@
     [tool.poetry]
     name = "kaggle-agent-poet"
-    version = "0.1.0"
-    description = ""
+    version = "0.0.7"
+    description = "single agent kaggle problem solver"
     authors = ["MSNP1381 <mohamandnematpoor@gmail.com>"]
     readme = "README.md"
 
