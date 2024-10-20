@@ -4,6 +4,13 @@
 
 ---
 
+**Future Plans:**
+
+- [ ] add visual management system 📊
+- [ ] back to the future ⏰⬅️🚗 <small>add time travel to memory system and agent</small>
+- [ ] **nerds with needles 🤓💉** <small>knowledge injection</small>
+- [ ] <b>Assembly of philosophers and a chalice(🤔)\*🥛 </b> <small>agent orchestration</small>
+
 ## 🌟 Overview
 
 Welcome to the Kaggle Problem Solver, the Swiss Army knife of machine learning challenges! This isn't just any old problem solver – it's your AI-powered companion in the wild world of Kaggle competitions. Using a "plan and execute" strategy that would make any project manager jealous, our system tackles ML problems with the finesse of a seasoned data scientist and the tireless energy of a thousand interns. **code generation agent is inspired from langgraph agent [<u>link</u>](https://blog.langchain.dev/code-execution-with-langgraph/)**
@@ -18,7 +25,7 @@ Welcome to the Kaggle Problem Solver, the Swiss Army knife of machine learning c
 
 ## 🔄 Workflow: The Circle of AI Life
 
-1. Plan →( 2. Enhance → 3. Code → 4. Execute )→ Repeat!
+1. Scrape → 2. Data analyze → 3. Plan →( 4. Enhance → 5. Code → 6. Execute )→ Repeat!
 
 It's like a never-ending dance party, but with more algorithms and less awkward small talk.
 
