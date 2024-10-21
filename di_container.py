@@ -55,7 +55,6 @@ class AppModule(Module):
     @provider
     def provide_llm(self) -> ChatOpenAI:
         return ChatOpenAI(
-            base_url=config_reader.get("API", "base_url"),
             model=config_reader.get("API", "model"),
             temperature=config_reader.getfloat("API", "temperature"),
         )

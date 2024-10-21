@@ -96,10 +96,8 @@ class KaggleProblemPlanner:
             llm (ChatOpenAI): Language model for generating plans.
             memory (MemoryAgent): Memory agent for managing problem-solving state.
         """
-        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
         self.config = config
         self.llm = ChatOpenAI(
-            base_url=self.base_url,
             model="gpt-4o",
             temperature=0.75,
         )

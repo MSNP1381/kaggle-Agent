@@ -35,7 +35,6 @@ def main():
     # Initialize OpenAI LLM
     try:
         llm = ChatOpenAI(
-            base_url=os.getenv("OPENAI_API_BASE_URL", "https://api.openai.com/v1"),
             model=os.getenv("OPENAI_MODEL", "gpt-4"),
             http_client=proxy,
             temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.0")),

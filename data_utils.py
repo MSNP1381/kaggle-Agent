@@ -94,7 +94,13 @@ class DataUtils:
         # Write result back to MongoDB if available
         if self.mongo_client:
             try:
-                collection.insert_one(output)
+                if data:
+                    collection.update_one(
+                        {"challenge_url": state.challenge_url},
+                        {"$set": output},
+                    )
+                else:
+                    collection.insert_one(output)
             except Exception as e:
                 print(f"Error writing result to MongoDB: {str(e)}")
 
@@ -120,7 +126,6 @@ def main():
 
     try:
         llm = ChatOpenAI(
-            base_url=os.getenv("OPENAI_API_BASE_URL", "https://api.openai.com/v1"),
             model=os.getenv("OPENAI_MODEL", "gpt-4"),
             # http_client=proxy,
             temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.0")),

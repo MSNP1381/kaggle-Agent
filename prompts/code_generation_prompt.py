@@ -2,7 +2,7 @@ import random
 
 from langchain.prompts import ChatPromptTemplate
 
-libraries = open("./notebook_requirements.txt").readlines()
+libraries = open("./notebook_requirements.txt").read().split("\n")
 random.shuffle(libraries)
 pkg_str = ", ".join([f"`{p}`" for p in libraries])
 
@@ -11,62 +11,52 @@ IMPROVED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-You are an AI assistant tasked with generating Python code for a Kaggle machine learning problem. Your goal is to create efficient and effective code based on the given task and context.
+You are an AI assistant generating Python code for a Kaggle machine learning problem. Your goal is to create efficient, effective, and maintainable code for the given task and context.
 
 Context:
-problem_description: {problem_description}
-current_task: {current_task}
-evaluation_metric: {evaluation_metric}
-planned_tasks: {planned_tasks}
-previous_codes: {previous_codes}
-
-Current Task:
-{current_task}
+- Problem description: {problem_description}
+- Current task: {current_task}
+- Evaluation metric: {evaluation_metric}
+- Available libraries: {pkg_str} (and if others are needed you can install them)
 
 Instructions:
-1. Analyze the current task and its relationship to the overall project.
-2. Review the previous code and consider how it can be built upon or improved.
-3. Think step-by-step about the best approach to implement the current task:
-   a. What libraries or functions will be needed?
-   b. How can we ensure efficiency and readability?
-   c. Are there any potential pitfalls or edge cases to consider?
-   d. How does this code fit into the broader project structure?
-4. Generate the Python code for the current task, incorporating your step-by-step reasoning.
-5. Briefly explain your code and reasoning, highlighting any important decisions or trade-offs.
+1. Analyze the current task in relation to the overall project and previous tasks.
+2. Generate Python code for the current task, considering:
+   - Efficiency and readability
+   - Proper error handling and edge cases
+   - Integration with previous code
+   - Adherence to PEP 8 style guidelines
+   - Inline comments and docstrings for maintainability
+3. Include unit tests or assertions to validate your code's functionality.
+4. Consider performance optimization where relevant.
+5. Provide a brief explanation of your implementation choices.
 
-Your response should follow this structure:
-1. Task Analysis
-2. Previous Code Review
-3. Step-by-step Reasoning
-4. Generated Code
-5. Explanation and Justification
+Response Structure:
+1. Code Implementation (with comments)
+2. Unit Tests / Assertions
+3. Explanation (including any trade-offs or assumptions)
 
-Remember to consider best practices, code efficiency, and the specific requirements of the Kaggle problem.
+Additional Considerations:
+- Ensure proper data handling and preprocessing techniques.
+- Consider memory usage and execution time constraints.
+- Implement logging for important steps or potential issues.
+
+Previous tasks: ```
+{previous_tasks}
+```
+Previous code:
+```
+{previous_codes}
+```
 """,
         ),
         (
             "human",
             """
-Current task: {current_task}
-Evaluation metric: {evaluation_metric}
+Implement the following task:
+{current_task}
 
-## Previous tasks:
-
-```
-
-{previous_tasks}
-
-```
-
-## Previous codes:
-
-```
-
-{previous_codes}
-
-```
-
-Generate code for the current task.
+Ensure your solution integrates well with the previous code and addresses the overall problem goal.
 """,
         ),
     ]

@@ -13,7 +13,7 @@ from di_container import create_injector
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    format="%(asctime)s %(name)s: %(message)s",
     handlers=[
         logging.FileHandler("kaggle_agent.log"),
         logging.StreamHandler(),

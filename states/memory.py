@@ -1,4 +1,3 @@
-import os
 from typing import Dict, List, Optional, Tuple, Union
 
 from bson import ObjectId
@@ -71,8 +70,7 @@ class MemoryAgent:
         self.task_results_dict = {}
         self.docs_retriever = None
         self.docs_vectorstore = None
-        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
-        self.embeddings = OpenAIEmbeddings(base_url=self.base_url)
+        self.embeddings = OpenAIEmbeddings()
         self.llm = llm
 
         self.client = mongo

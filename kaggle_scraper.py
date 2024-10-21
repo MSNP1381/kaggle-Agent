@@ -44,7 +44,6 @@ class ScrapeKaggle:
         config=None,
         proxy=None,
     ):
-        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
         """
         Initializes the DataUtils with configuration and proxy settings.
 
@@ -52,6 +51,7 @@ class ScrapeKaggle:
             config (dict): Configuration settings for the utility.
             proxy (str): Proxy URL for HTTP requests.
         """
+        self.first_time_scrape = False
         self.scraped_data_collection = client["challenge_data"].get_collection(
             "scraped_data"
         )
@@ -61,7 +61,6 @@ class ScrapeKaggle:
         if proxy:
             http_client = httpx.Client(proxy=proxy)
         self.llm = ChatOpenAI(
-            base_url=self.base_url,
             model="gpt-4o-mini",
             http_client=http_client,
             api_key=os.getenv("OPENAI_API_KEY"),
@@ -198,6 +197,7 @@ class ScrapeKaggle:
             else:
                 raise ValueError("No scraped data or summarized data found")
         else:
+            self.first_time_scrape = True
             dict_ = self.extract_challenge_details(challenge_url)
             data = self.summarize_data(**dict_)
 
@@ -322,14 +322,17 @@ class ScrapeKaggle:
         }
 
         self.mongo_dict.update({"summarized": result})
-        self.scraped_data_collection.update_one(
-            {"challenge_url": self.mongo_dict["challenge_url"]},
-            {
-                "$set": {
-                    "summarized": result,
-                }
-            },
-        )
+        if self.first_time_scrape:
+            self.scraped_data_collection.insert_one(self.mongo_dict)
+        else:
+            self.scraped_data_collection.update_one(
+                {"challenge_url": self.mongo_dict["challenge_url"]},
+                {
+                    "$set": {
+                        "summarized": result,
+                    }
+                },
+            )
 
         return result
 

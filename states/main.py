@@ -40,43 +40,17 @@ class KaggleProblemState(BaseModel):
 
         return "".join(code_list)
 
-    def get_task_results(self, last_task_num=0, to_str=True):
-        task_list = ["** Number of executed task results : {last_task_num}\n"]
-        for index_, cr in enumerate(self.task_codes_results[:-last_task_num:-1]):
-            (enh_task, code, result) = cr
-            task_list.append(
-                f"""
-Executed Task No.{index_+1}
-
-**Task Description :**
-`
-{str(enh_task.task)}
-`
-----------------------------------------
-**Generated Code :**
-``` python
-{str(code)}
-```
-----------------------------------------
-**Output Result :**
-`
-{result}
-`
-----------------------------------------"""
-            )
-        return "\n".join(task_list) if to_str else task_list
-
     def get_future_tasks(self):
         i = self.index + 1
         tasks = self.planned_tasks[i:]
-        return "".join([f"- {i}\n" for i in tasks])
+        return "".join([f"- {self.index +ind+1}. {i}\n" for ind, i in enumerate(tasks)])
 
-    def get_planned_tasks(self) -> str:
+    def get_executed_tasks(self) -> str:
         index = self.index + 1
         tasks = self.planned_tasks[:index]
         output_str = "** Number of executed tasks: ** \n "
-        for i in tasks:
-            output_str += f"- {i}\n"
+        for ind, i in enumerate(tasks):
+            output_str += f"- {ind+1}. {i}\n"
         return output_str
 
     def __str__(self) -> str:
@@ -102,6 +76,8 @@ Executed Task No.{index_+1}
         for i, (enhanced_task, _, result) in enumerate(
             self.task_codes_results[-last_n:][::-1], 1
         ):
+            if len(result) > 250:
+                result = result[:250] + "..."
             results.append(
                 f"Previous Task {i}:\n"
                 f"Task: {enhanced_task.final_answer}\n"

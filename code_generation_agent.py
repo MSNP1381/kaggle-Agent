@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import re
 from typing import List, TypedDict
 
@@ -128,8 +127,6 @@ class CodeGenerationAgent:
         model="gpt-4o-mini",
         max_iterations=1,
     ):
-        self.base_url = os.getenv("BASE_URL", "https://api.avalapis.ir/v1")
-
         # self.proxy = proxy
 
         self.max_iterations = max_iterations
@@ -212,7 +209,7 @@ class CodeGenerationAgent:
         logger.info(f"Few shots examples: {str(few_shots_examples)[:100]}...")
 
         evaluation_metric = kaggle_state.evaluation_metric
-        planned_tasks = kaggle_state.get_planned_tasks()
+        planned_tasks = kaggle_state.get_executed_tasks()
 
         # Choose the appropriate base prompt
         base_prompt = self.choose_base_prompt(state)
