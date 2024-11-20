@@ -107,6 +107,7 @@ class DataUtils:
         return output
 
     def _load_dataset(self, dataset_path: str) -> Optional[pd.DataFrame]:
+        dataset_path = "./input/train.csv"
         # Fallback to loading from CSV
         try:
             return pd.read_csv(dataset_path)

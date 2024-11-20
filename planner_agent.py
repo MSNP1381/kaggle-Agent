@@ -98,8 +98,8 @@ class KaggleProblemPlanner:
         """
         self.config = config
         self.llm = ChatOpenAI(
-            model="gpt-4o",
-            temperature=0.75,
+            model="gpt-4o-mini",
+            temperature=0.5,
         )
         self.memory = memory
         self.planner_prompt = PLANNER_PROMPT

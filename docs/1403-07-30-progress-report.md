@@ -37,6 +37,7 @@ graph TB
     style E fill:#ffc,stroke:#333,stroke-width:1px
     style F fill:#ccf,stroke:#333,stroke-width:1px
     style G fill:#fcf,stroke:#333,stroke-width:1px
+    style M fill:#ffc,stroke:#333,stroke-width:1px
 
     A((Start)) --> B[Scraper]
     B --> G[Data Utils]
@@ -45,6 +46,14 @@ graph TB
     F --> C[Code Agent]
     E[Executor] -.-> F
     E -. Plan Finished .-> H((Finish))
+
+    M[Memory Agent]
+    M <-.-> B
+    M <-.-> G
+    M <-.-> D
+    M <-.-> F
+    M <-.-> C
+    M <-.-> E
 
     subgraph Code_Agent_Process [Code Agent Process]
         style Code_Agent_Process fill:#cfc,stroke:#333,stroke-width:1px
@@ -128,11 +137,29 @@ The Executor module:
 - Collects and processes results through websocket communication
 - Provides feedback for plan refinement and code improvement
 
+### 4.8 Memory Agent
+
+The Memory Agent is a crucial component of our system, responsible for storing, retrieving, and managing both short-term and long-term memory. Key features include:
+
+- **Short-term Memory**: Implemented as a `WeightedMemory` class, it stores recent information with importance weights.
+- **Long-term Memory**: Utilizes Chroma, a vector database, for efficient storage and retrieval of documents and examples.
+- **Document Management**: Supports adding, retrieving, and searching documents with metadata.
+- **Example Storage**: Stores task-code-result examples for future reference and similarity search.
+- **Summary Updates**: Maintains an up-to-date summary of the project's progress.
+- **Question Answering**: Provides a QA chain for answering questions based on stored information.
+
 ## 5. Current Progress and Achievements
 
 - Successfully implemented and integrated the Scraper, Data Utils, Planner, and Enhancer modules
 - Achieved stable code generation capabilities
 - Developed a functioning execution pipeline via Jupyter server integration
+- Implemented a memory module to store and retrieve relevant information across sessions
+- Refined the code generation agent to produce more accurate and efficient code
+- Expanded the range of Kaggle challenge types the agent can handle
+- Implemented a sophisticated Memory Agent with both short-term and long-term memory capabilities
+- Integrated Chroma vector database for efficient storage and retrieval of documents and examples
+- Developed a system for maintaining and updating project summaries based on task executions
+- Created a flexible document management system within the Memory Agent
 
 ## 6. Challenges and Future Work
 
@@ -140,7 +167,30 @@ The Executor module:
 - Enhance the adaptability of the Code Generation Agent to a wider range of Kaggle challenges
 - Improve overall system performance and efficiency
 - Conduct comprehensive testing across various challenge types
+- Optimize memory usage and retrieval for better context understanding
+- Implement more sophisticated error handling and debugging capabilities
+- Explore integration with additional external APIs and resources to enhance problem-solving capabilities
+- Optimize the integration of the Memory Agent with other modules, particularly the Code Generation Agent
+- Improve the efficiency of similarity searches for retrieving relevant examples
+- Enhance the summary update mechanism to provide more insightful project overviews
+- Develop more advanced filtering and querying capabilities for the long-term memory
 
-## 7. Conclusion
+## 7. Recent Code Updates
 
-The Kaggle Agent project has made significant strides in automating the process of solving data science challenges. With key modules operational and producing stable results, we are well-positioned to continue development and refinement. next steps focus on completing the Replanner module and enhancing overall system performance to tackle an even broader range of Kaggle challenges effectively.
+Recent updates to the codebase include:
+
+- Refactoring of the `code_generation_agent.py` to improve modularity and efficiency
+- Implementation of a new `memory.py` module for persistent storage of relevant information
+- Updates to the main README.md to reflect recent changes and provide clearer setup instructions
+- Implementation of the `MemoryAgent` class in `memory.py`, providing comprehensive memory management functionalities
+- Integration of the Memory Agent into the `CodeGenerationAgent` class in `code_generation_agent.py`
+- Addition of methods in `CodeGenerationAgent` to utilize the Memory Agent for retrieving relevant context and examples
+- Implementation of a summary update mechanism to maintain an overview of project progress
+
+## 8. Conclusion
+
+The Kaggle Agent project continues to make significant progress, with the recent addition of the Memory Agent being a major enhancement. This new component allows for more efficient storage and retrieval of information, enabling the system to learn from past experiences and make more informed decisions. The integration of short-term and long-term memory, along with the ability to maintain updated summaries, significantly improves the agent's capability to tackle complex Kaggle challenges.
+
+The use of advanced technologies like Chroma for vector storage and retrieval demonstrates our commitment to employing state-of-the-art solutions. As we move forward, optimizing the interaction between the Memory Agent and other components, particularly the Code Generation Agent, will be crucial for maximizing the system's performance.
+
+Our next steps will focus on refining these integrations, improving the efficiency of similarity searches, and enhancing the overall decision-making process of the agent. These advancements bring us closer to our goal of creating a highly capable autonomous system for solving diverse data science challenges on the Kaggle platform.

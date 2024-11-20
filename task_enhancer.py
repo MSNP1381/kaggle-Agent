@@ -8,7 +8,6 @@ from prompts.task_enhancer import TASK_ENHANCEMENT_PROMPT
 from states.enhancer import EnhancedTask
 from states.main import KaggleProblemState
 from states.memory import MemoryAgent
-from utils import extract_markdown
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -37,7 +36,7 @@ class KaggleTaskEnhancer:
         previous_result = state.get_previous_result(
             last_n=3
         )  # Get results of last 2 tasks
-        response = self.task_enhancement_prompt.format_messages(
+        response = self.task_enhancement_prompt.format(
             current_task=current_task,
             evaluation_metrics=state.evaluation_metric,
             problem_description=state.problem_description,
@@ -50,19 +49,18 @@ class KaggleTaskEnhancer:
         )
 
         logger.debug("Invoking LLM for task enhancement with CoT reasoning")
-        enhanced_task = (self.llm | self.output_parser).invoke(response)
-        parsed_task = EnhancedTask(final_answer=enhanced_task)
-        parsed_task.final_answer = extract_markdown(parsed_task.final_answer)
+        parsed_task = self.llm.with_structured_output(EnhancedTask).invoke(response)
+
         logger.info("Task enhanced successfully with CoT reasoning")
-        logger.debug(f"Enhanced task: {parsed_task.final_answer[:100]}...")
+        logger.debug(f"Enhanced task: {str(parsed_task)[:100]}...")
 
         # Add the enhanced task to memory
         self.memory_agent.add_to_short_term_memory(str(parsed_task))
         logger.debug("Enhanced task with CoT reasoning added to short-term memory")
-
+        print("Parsed Task: \n\n", str(parsed_task))
         return {
             "index": state.index,
-            "enhanced_tasks": state.enhanced_tasks + [parsed_task],
+            "enhanced_tasks": [parsed_task],
         }
 
     def __call__(self, state: KaggleProblemState):

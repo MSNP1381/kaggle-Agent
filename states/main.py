@@ -36,6 +36,7 @@ class KaggleProblemState(BaseModel):
 
         for _, code, _ in self.task_codes_results[:-last_task_num:-1]:
             code_list.append("\n# %% \n")
+            code_list.append("\n#############################\n\n")
             code_list.append(str(code))
 
         return "".join(code_list)
@@ -51,7 +52,7 @@ class KaggleProblemState(BaseModel):
         output_str = "** Number of executed tasks: ** \n "
         for ind, i in enumerate(tasks):
             output_str += f"- {ind+1}. {i}\n"
-        return output_str
+        return "NO Task Executed" if index <= 0 else output_str
 
     def __str__(self) -> str:
         return self.model_dump_json()
@@ -80,8 +81,18 @@ class KaggleProblemState(BaseModel):
                 result = result[:250] + "..."
             results.append(
                 f"Previous Task {i}:\n"
-                f"Task: {enhanced_task.final_answer}\n"
+                f"Task: {str(enhanced_task)}\n"
                 f"Result:\n{result}\n"
             )
 
         return "\n".join(results)
+
+    def get_history(self):
+        history = []
+        for t, c, r in self.task_codes_results:
+            history += [
+                ("human", "task is :\n\n" + str(t)),
+                ("ai", "your code is :\n\n" + str(c)),
+                ("human", "Result is :\n\n", str(r)),
+            ]
+        return history
