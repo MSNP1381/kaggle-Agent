@@ -6,7 +6,7 @@
       ]
     }
   },
-  "dockerComposeFile": "./docker-compose.yml",
+  "dockerComposeFile": "../docker-compose.yml",
   "features": {
     "docker-in-docker": {
       "version": "latest"
