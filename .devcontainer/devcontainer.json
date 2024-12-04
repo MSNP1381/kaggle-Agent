@@ -1,5 +1,5 @@
 {
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "../docker-compose.yml",
   "extensions": [
     "ms-azuretools.vscode-docker"
   ],
