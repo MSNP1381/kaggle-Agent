@@ -3,7 +3,8 @@
   "features": {
     "ghcr.io/devcontainers-extra/features/mongosh-homebrew:1": {},
     "ghcr.io/itsmechlark/features/postgresql:1": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers-extra/features/poetry:2": {}
   },
     "name": "Kaggle Agent Dev Container",
   "postCreateCommand": "pipx install poetry && poetry install",
