@@ -1,19 +1,19 @@
 {
-  "customizations": {
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/mongosh-homebrew:1": {},
+    "ghcr.io/itsmechlark/features/postgresql:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+    "name": "Kaggle Agent Dev Container",
+  "postCreateCommand": "pipx install poetry && poetry install",
+  "service": "jupyter-app",
+  "workspaceFolder": "/workspace",
+    "customizations": {
     "vscode": {
       "extensions": [
         "ms-azuretools.vscode-docker"
       ]
     }
   },
-  "dockerComposeFile": "../docker-compose.yml",
-  "features": {
-    "docker-in-docker": {
-      "version": "latest"
-    }
-  },
-  "name": "Kaggle Agent Dev Container",
-  "postCreateCommand": "pipx install poetry && poetry install",
-  "service": "jupyter-app",
-  "workspaceFolder": "/workspace"
 }
