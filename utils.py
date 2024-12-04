@@ -175,14 +175,14 @@ def state2doc_write(state) -> str:
     }
 
     s = TEXT.format(**d)
-    open("./ongoing/doc.txt", "w").write(s)
-    with open("./ongoing/doc_dict.json", "w") as file:
+    open("./input/doc.txt", "w").write(s)
+    with open("./input/doc_dict.json", "w") as file:
         json.dump(d, file)
     return TEXT.format(**d)
 
 
 def state2retrieve_doc():
-    with open("./ongoing/doc_dict.json") as file:
+    with open("./input/doc_dict.json") as file:
         d = json.load(file)
     data = []
     for k, v in d.items():

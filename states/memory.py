@@ -72,7 +72,7 @@ class MemoryAgent:
         self.docs_vectorstore = None
         self.embeddings = OpenAIEmbeddings()
         self.llm = llm
-        self.llm.model_name = "gpt-3.5-turbo"
+        self.llm.model_name = ("gpt-4o",)
 
         self.client = mongo
         self.db = self.client["kaggle_agent"]

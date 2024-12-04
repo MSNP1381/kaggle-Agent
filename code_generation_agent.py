@@ -91,7 +91,7 @@ class CodeGraphState(TypedDict):
     error_name: str
 
     error_msg: str
-
+    error_code: str
     generation: GeneratedCode
 
     iterations: int
@@ -127,7 +127,7 @@ class CodeGenerationAgent:
         self.code_gen_prompt = IMPROVED_CODE_GEN_PROMPT
 
         self.output_parser = StrOutputParser()
-
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
         self.llm_raw = llm
 
         self.code_gen_chain = self.code_gen_prompt | self.llm_raw | self.output_parser
@@ -155,7 +155,7 @@ class CodeGenerationAgent:
         else:
             logger.info("---CODE GENERATION PROMPT Selected---")
             return self.code_gen_prompt.partial(
-                history=state["kaggle_state"].get_history()
+                history=state["kaggle_state"].get_history(2)
             )
 
     def generate_code(self, state: CodeGraphState) -> CodeGraphState:
@@ -163,9 +163,12 @@ class CodeGenerationAgent:
 
         kaggle_state = state["kaggle_state"]
         iterations = state["iterations"]
-        messages = state["messages"]
-        current_task = str(kaggle_state.enhanced_tasks[-1])
 
+        current_task = str(kaggle_state.enhanced_tasks[-1])
+        plan = kaggle_state.planned_tasks
+        plan_str = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
+        task_formatted = f"""For the following plan:
+                {plan_str}\n\nYou are tasked with executing step {1}, {current_task}."""
         # relevant_context = self.memory_agent.ask_docs(current_task)
         # few_shots_examples = json.dumps(
         #     self.memory_agent.get_few_shots(current_task), indent=2
@@ -179,31 +182,25 @@ class CodeGenerationAgent:
 
         base_prompt = self.choose_base_prompt(state)
 
-        # Add error information to messages if there was an error
-        if state.get("error") == "yes":
-            error_type = self.categorize_error(state["error_msg"])
-            error_message = f"Error Type: {error_type}\nError Message: {state['error_msg']}\nPlease focus on fixing this error in your next code generation."
-            messages.append(("human", error_message))
-
-        # Generate code
         code_solution: GeneratedCode = (
             base_prompt | self.llm_raw.with_structured_output(GeneratedCode)
         ).invoke(
             {
                 "pkg_str": pkg_str,
                 "problem_description": kaggle_state.problem_description,
-                "current_task": current_task,
+                "current_task": task_formatted,
                 "evaluation_metric": evaluation_metric,
                 "planned_tasks": planned_tasks,
-                "": kaggle_state.model_parametrized_name,
+                "error_code": state.get("error_code", ""),
                 "previous_tasks": kaggle_state.get_previous_result(2),
                 "relevant_context": relevant_context,
-                "history": messages,
+                "history": kaggle_state.get_history(2),
                 "previous_codes": kaggle_state.get_executed_codes(2),
                 "few_shots_examples": few_shots_examples,
                 "current_code": str(state.get("generation", "")),
                 "error_msg": state.get("error_msg", ""),
-                "resoning": state.get("suggested_fix", ""),
+                "suggested_fix": state.get("suggested_fix", ""),
+                "reasoning": state.get("suggested_fix", ""),
             },
             config=self.config,
         )
@@ -243,6 +240,7 @@ class CodeGenerationAgent:
                 "error": "yes",
                 "error_msg": remove_color(exec2s(e.traceback)),
                 "error_name": remove_color(exec2s(e.ename)),
+                "error_code": str(code_solution),
                 "iterations": iterations + 1,
                 "messages": [],
             }
@@ -291,19 +289,6 @@ class CodeGenerationAgent:
                 "messages": [],
             }
 
-    def categorize_error(self, error_name: str) -> str:
-        # Implement error categorization logic
-        # This could use regex patterns or ML techniques to classify errors
-        # For now, we'll use a simple placeholder implementation
-        if "syntax" in error_name.lower():
-            return "syntax"
-        elif "runtime" in error_name.lower():
-            return "runtime"
-        elif "value" in error_name.lower():
-            return "value"
-        else:
-            return "unknown"
-
     def reflect_on_error(self, state: CodeGraphState):
         code = state["generation"]
         error = state["error_msg"]
@@ -328,28 +313,27 @@ class CodeGenerationAgent:
         workflow.add_node("reflect_on_error", self.reflect_on_error)
 
         # workflow.add_node("analyze_error", self.analyze_error)
+        workflow.set_entry_point("generate_code")
 
         workflow.add_edge("generate_code", "execute_code")
 
         workflow.add_edge("reflect_on_error", "generate_code")
 
-        workflow.set_entry_point("generate_code")
-
         def decide(x: CodeGraphState):
             if x["error"] == "yes" and x["iterations"] > self.max_iterations:
                 raise NotebookFailError(x["error_msg"], str(x["generation"]))
             if x["error"] == "yes" and x["iterations"] <= self.max_iterations:
-                return "debug_code"
+                return "reflect_on_error"
             else:
                 return END
 
         workflow.add_conditional_edges(
             "execute_code",
             decide,
-            {
-                "debug_code": "reflect_on_error",
-                END: END,
-            },
+            [
+                "reflect_on_error",
+                END,
+            ],
         )
 
         return workflow.compile()
@@ -365,10 +349,6 @@ class CodeGenerationAgent:
         }
 
         self.max_iterations = max_iterations
-
-        # Update these lines
-        self.llm_raw = self.llm_raw
-        self.code_gen_chain = self.code_gen_chain
 
         # self.add_init_code(initial_state)
         result = self.workflow.invoke(initial_state, config=self.config)

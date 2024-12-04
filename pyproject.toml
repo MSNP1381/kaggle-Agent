@@ -34,6 +34,7 @@
     langchain-chroma = "^0.1.4"
     pre-commit = "^4.0.1"
     imblearn = "^0.0"
+    torch = { url = "https://download.pytorch.org/whl/cu124/torch-2.5.1%2Bcu124-cp312-cp312-win_amd64.whl"}
 
 
 

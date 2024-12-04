@@ -1,6 +1,6 @@
 import random
 
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 libraries = open("./notebook_requirements.txt").read().split("\n")
 random.shuffle(libraries)
@@ -15,6 +15,66 @@ IMPROVED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages(
 You are a python code generation expert in machine learning and data science. Your task is to generate a code for the given task
 You are in a notebook  environment, Generate code for next notebook cell acording to current task provided.
 Pay attention to prevoius codes and for new cell continue integrity of code and solution.
+in your code generation note that utilization matters for example use n_jobs=-1 in using scikit models and other things
+
+
+
+## if data is loaded in previous codes use then and never write redundant data loading use prevoius variables in last generated code
+if you Want to load new data use these descriptions:
+
+<LOAD_NEW_DATA>
+Data Handling:
+- Input directory: "./input/"
+    files are:
+    1. ./input/train.csv
+    2. ./input/overview.md
+- Output directory: "./output/"
+
+</LOAD_NEW_DATA>
+PROJECT SPECIFICATIONS
+---------------------
+Problem:
+'''
+
+{problem_description}
+
+'''
+
+
+Evaluation Metric: {evaluation_metric}
+
+
+Available Libraries for code generation: {pkg_str}
+
+
+""",
+        ),
+        MessagesPlaceholder("history"),
+        (
+            "user",
+            """\
+please write code for this task.
+Note : ** Please skip visaulization and using plots**
+
+<CurrentTask>
+
+{current_task}
+
+</CurrentTask>
+""",
+        ),
+    ]
+).partial(pkg_str=pkg_str)
+
+
+DEBUGGING_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+you are a python code debugger debug cpde based on previous code and error message provided.
+## if data is loaded in previous codes use then and never write redundant data loading use prevoius variables in last generated code
+in your code generation note that utilization matters for example use n_jobs=-1 in using scikit models and other things
 
 PROJECT SPECIFICATIONS
 ---------------------
@@ -31,67 +91,53 @@ Evaluation Metric: {evaluation_metric}
 
 Available Libraries for code generation: {pkg_str}
 
-TECHNICAL REQUIREMENTS
----------------------
-Data Handling:
-- Input directory: "./input/"
-    files are:
-    1. ./input/train.csv
-    2. ./input/test.csv
-    3. ./input/sample_submission.csv
-    4. ./input/overview.md
-- Output directory: "./output/"
-""",
-        ),
-        ("placeholder", "{history}"),
-        (
-            "user",
-            """\
-please write code for this task.
-
-Current Task: '''
-
-{current_task}
-
-'''
 
 """,
         ),
-    ]
-).partial(pkg_str=pkg_str)
-
-
-DEBUGGING_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """
-you are a python code debugger debug cpde based on previous code and error message provided.
-
-""",
-        ),
-        ("placeholder", "{history}"),
+        MessagesPlaceholder("history"),
         (
             "user",
             """
 Please fix the error in the code and provide the corrected code.
 
-Current code:
+For using data always Look at the previous cell and its variables and try to use them.
 
-```{current_code}```
+if you Want to load new data use these descriptions:
+
+<LOAD_NEW_DATA>
+Data Handling:
+- Input directory: "./input/"
+    files are:
+    1. ./input/train.csv
+    2. ./input/overview.md
+- Output directory: "./output/"
+
+</LOAD_NEW_DATA>
+<CodeWithError>
+
+```{error_code}```
+
+</CodeWithError>
+
+<ErrorMessage>
+{error_msg}
+</ErrorMessage>
 
 
+<ErrorResoning>
 
-resoning on error:
-
-{resoning}
+{suggested_fix}
+</ErrorResoning>
             """,
         ),
     ]
 )
 
-NEW_SOLUTION_PROMPT = PromptTemplate.from_template(
-    """
+NEW_SOLUTION_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
 You are a Kaggle grandmaster expert in machine learning and data science. Your task is to generate a new solution for the given problem, taking into account previous attempts and errors.
 
 Guidelines:
@@ -100,13 +146,44 @@ Guidelines:
 3. Implement the new solution as a complete, self-contained Python script.
 4. Explain your reasoning for the new approach.
 5. Ensure the new solution addresses the current task and overall problem goal.
+6. For using data always Look at the previous cell and its variables and try to use them.
+7. in your code generation note that utilization matters for example use n_jobs=-1 in using scikit models and other things
+## if data is loaded in previous codes use then and never write redundant data loading use prevoius variables in last generated code
 
-Problem description: {problem_description}
-Current task: {current_task}
-Evaluation metric: {evaluation_metric}
-Previous task results: {previous_tasks}
+if you Want to load new data use these descriptions:
+<LOAD_NEW_DATA>
+Data Handling:
+- Input directory: "./input/"
+    files are:
+    1. ./input/train.csv
+    2. ./input/overview.md
+- Output directory: "./output/"
+
+</LOAD_NEW_DATA>
+
+
+
+PROJECT SPECIFICATIONS
+---------------------
+Problem:
+'''
+
+{problem_description}
+
+'''
+
+
+Evaluation Metric: {evaluation_metric}
+
+
+Available Libraries for code generation: {pkg_str}
+
+
 Error message from previous attempt: {error_msg}
 
 Please generate a new solution that addresses the current task and avoids previous errors.
-"""
+""",
+        ),
+        MessagesPlaceholder("history"),
+    ]
 )

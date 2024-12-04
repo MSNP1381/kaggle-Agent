@@ -52,8 +52,8 @@ class KaggleProblemSolver:
         # self.handler = handler
 
     def _init_state(self, url: str):
-        self.dataset_path = "./ongoing/train.csv"
-        self.test_dataset_path = "./ongoing/test.csv"
+        self.dataset_path = "./input/train.csv"
+        self.test_dataset_path = "./input/test.csv"
 
         return KaggleProblemState(
             **{

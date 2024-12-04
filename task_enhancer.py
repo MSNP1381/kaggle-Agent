@@ -29,8 +29,8 @@ class KaggleTaskEnhancer:
         current_task = state.planned_tasks[state.index]
         logger.info(f"Enhancing task: {current_task[:100]}...")
 
-        relevant_context = self.memory_agent.ask_docs(current_task) or []
-        logger.debug(f"Retrieved relevant context: {relevant_context[:5]}...")
+        # relevant_context = self.memory_agent.ask_docs(current_task) or []
+        # logger.debug(f"Retrieved relevant context: {relevant_context[:5]}...")
 
         previous_codes = state.get_executed_codes()
         previous_result = state.get_previous_result(
@@ -45,10 +45,12 @@ class KaggleTaskEnhancer:
             completed_tasks=state.get_executed_tasks(),
             planned_tasks=str(state.planned_tasks),
             future_tasks=str(state.get_future_tasks()),
-            relevant_context=relevant_context,
+            # relevant_context=relevant_context,
         )
-
+        print
         logger.debug("Invoking LLM for task enhancement with CoT reasoning")
+        self.llm.model_name = "gpt-4o"
+        print(self.llm.model_name)
         parsed_task = self.llm.with_structured_output(EnhancedTask).invoke(response)
 
         logger.info("Task enhanced successfully with CoT reasoning")

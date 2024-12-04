@@ -4,7 +4,6 @@ import os
 from typing import List
 
 from injector import inject
-from langchain.output_parsers import PydanticOutputParser
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
@@ -32,54 +31,6 @@ class Plan(BaseModel):
     def to_list(self) -> List[str]:
         return [f"** {task.task_title} **\n{task.task_details}" for task in self.tasks]
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "tasks": [
-                    {
-                        "task_title": "Data Collection and Understanding",
-                        "task_details": "Gather the dataset, understand its structure, and identify the target variable and features.",
-                    },
-                    {
-                        "task_title": "Data Preprocessing",
-                        "task_details": "Clean the dataset, handle missing values, encode categorical variables, and normalize/standardize numerical features.",
-                    },
-                    {
-                        "task_title": "Exploratory Data Analysis (EDA)",
-                        "task_details": "Perform statistical analysis, create visualizations (histograms, scatter plots, correlation matrices), and identify patterns and outliers.",
-                    },
-                    {
-                        "task_title": "Feature Engineering",
-                        "task_details": "Create new features, perform feature selection, and apply dimensionality reduction techniques if necessary.",
-                    },
-                    {
-                        "task_title": "Model Selection",
-                        "task_details": "Research and choose appropriate machine learning algorithms based on the problem type (classification, regression, etc.) and data characteristics.",
-                    },
-                    {
-                        "task_title": "Model Training and Validation",
-                        "task_details": "Split the data into training and validation sets, train multiple models, and perform cross-validation to assess their performance.",
-                    },
-                    {
-                        "task_title": "Hyperparameter Tuning",
-                        "task_details": "Use techniques like grid search, random search, or Bayesian optimization to fine-tune the model hyperparameters.",
-                    },
-                    {
-                        "task_title": "Model Evaluation",
-                        "task_details": "Evaluate the best-performing model on a held-out test set using appropriate metrics (e.g., accuracy, F1-score, RMSE).",
-                    },
-                    {
-                        "task_title": "Model Interpretation",
-                        "task_details": "Analyze feature importance, use techniques like SHAP values to interpret the model's decisions, and generate insights.",
-                    },
-                    {
-                        "task_title": "Documentation and Reporting",
-                        "task_details": "Create a comprehensive report detailing the problem, methodology, results, and insights. Prepare visualizations and explanations for stakeholders.",
-                    },
-                ]
-            }
-        }
-
 
 class KaggleProblemPlanner:
     """
@@ -98,8 +49,8 @@ class KaggleProblemPlanner:
         """
         self.config = config
         self.llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0.5,
+            model="gpt-4o",
+            temperature=0.2,
         )
         self.memory = memory
         self.planner_prompt = PLANNER_PROMPT
@@ -116,15 +67,15 @@ class KaggleProblemPlanner:
         """
         try:
             logger.info("Starting to generate plan")
-            parser = PydanticOutputParser(pydantic_object=Plan)
 
             logger.debug(
                 f"Invoking LLM with problem description: {state.problem_description[:100]}..."
             )
-            response: Plan = (self.planner_prompt | self.llm | parser).invoke(
+            response: Plan = (
+                self.planner_prompt | self.llm.with_structured_output(Plan)
+            ).invoke(
                 {
                     "problem_description": state.problem_description,
-                    "format_instructions": parser.get_format_instructions(),
                     "quantitative_analysis": state.quantitative_analysis,
                     "qualitative_analysis": state.qualitative_analysis,
                 },

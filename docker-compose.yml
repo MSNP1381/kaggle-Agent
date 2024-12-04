@@ -25,18 +25,6 @@ services:
     ports:
       - "8888:8888"
 
-  # Selenium service from the first compose
-  selenium:
-    image: selenium/standalone-chrome:129.0
-    container_name: selenium
-    ports:
-      - "4444:4444"
-    environment:
-      - SCREEN_WIDTH=1920
-      - SCREEN_HEIGHT=1080
-    env_file:
-      - .env.docker
-
   # Langfuse server from the second compose
   langfuse-server:
     image: langfuse/langfuse:2.8

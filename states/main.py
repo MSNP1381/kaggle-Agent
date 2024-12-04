@@ -16,7 +16,7 @@ class KaggleProblemState(BaseModel):
     problem_description: str = Field(default="")
     dataset_path: str = Field(default="./ongoging/train.csv")
     test_dataset_path: str = Field(default="./ongoging/test.csv")
-    challenge_url: str = Field(default="")
+    challenge_url: str = Field(default="https://www.kaggle.com/c/spaceship-titanic/")
     dataset_info: Optional[str] = Field(default="")
     current_task: Optional[str] = Field(default="")
     modelInfo: Dict[str, Any] = Field(default=None)
@@ -87,12 +87,19 @@ class KaggleProblemState(BaseModel):
 
         return "\n".join(results)
 
-    def get_history(self):
+    def get_history(self, n: int = None):
         history = []
-        for t, c, r in self.task_codes_results:
+        n = min(len(self.task_codes_results), n)
+        task_codes_results = (
+            self.task_codes_results if n is None else self.task_codes_results[-n:]
+        )
+        for t, c, r in task_codes_results:
             history += [
-                ("human", "task is :\n\n" + str(t)),
-                ("ai", "your code is :\n\n" + str(c)),
-                ("human", "Result is :\n\n", str(r)),
+                (
+                    "human",
+                    """please write code for this task.\n\n<CurrentTask>\n{t}\n</CurrentTask>""",
+                ),
+                ("ai", "<CODE>" + c.model_dump_json() + "</CODE>"),
+                ("human", "Result is :\n\n" + str(r)),
             ]
         return history

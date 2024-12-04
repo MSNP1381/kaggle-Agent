@@ -61,9 +61,8 @@ class ScrapeKaggle:
         if proxy:
             http_client = httpx.Client(proxy=proxy)
         self.llm = ChatOpenAI(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             http_client=http_client,
-            api_key=os.getenv("OPENAI_API_KEY"),
             temperature=0,
         )
 
@@ -173,8 +172,8 @@ class ScrapeKaggle:
     def _init_state(
         self,
     ):
-        self.dataset_path = "./ongoing/train.csv"
-        self.test_dataset_path = "./ongoing/test.csv"
+        self.dataset_path = "./input/train.csv"
+        self.test_dataset_path = "./input/test.csv"
 
         return {
             # "file_env_var": env_var,
@@ -227,11 +226,11 @@ class ScrapeKaggle:
         Returns:
             dict: A dictionary containing paths to the downloaded data and leaderboard info.
         """
-        ls_dir = os.listdir("./ongoing")
+        ls_dir = os.listdir("./input")
         if ls_dir:
             return {
-                "data_path": "./ongoing",
-                "leaderboard_path": "./ongoing/leaderboard.json",
+                "data_path": "./input",
+                "leaderboard_path": "./input/leaderboard.json",
             }
         # Extract competition name from URL
         competition_name = challenge_url.split("/")[-1]
@@ -246,7 +245,7 @@ class ScrapeKaggle:
         )
         try:
             # Create directories to store the downloaded files
-            ongoing_dir = "./ongoing"
+            ongoing_dir = "./input"
             os.makedirs(ongoing_dir, exist_ok=True)
 
             # Download competition files

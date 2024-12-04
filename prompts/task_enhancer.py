@@ -4,7 +4,7 @@ TASK_ENHANCEMENT_PROMPT = PromptTemplate.from_template(
     """
 You are an kaggle master assistant.Pay attention to provided context andenhance provided simple task with more context and reasoning.
 Your goal is to analyze task for more effecient code generation agent which this output will fed to the code generation agent.
-
+** Please skip visaulization and using plots**
 ### CONTEXT
 
 **Problem**:
@@ -25,24 +25,20 @@ Your goal is to analyze task for more effecient code generation agent which this
 
 **Project Status**:
 
-- Completed:
+<CompletedTasks>
 
    {completed_tasks}
+</CompletedTasks>
 
-- Planned:
+<FututeTasksToDo>
 
    {future_tasks}
+</FututeTasksToDo>
 
 **Previous Code**:
 
 {previous_codes}
 
-----
-**Additional Context**:
-
-{relevant_context}
-
----
 
 """
 )
