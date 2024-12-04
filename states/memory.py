@@ -9,7 +9,7 @@ from langchain_chroma import Chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from utils import state2retrieve_doc
@@ -66,12 +66,13 @@ class WeightedMemory:
 
 class MemoryAgent:
     @inject
-    def __init__(self, llm, mongo):
+    def __init__(self, llm: ChatOpenAI, mongo):
         self.task_results_dict = {}
         self.docs_retriever = None
         self.docs_vectorstore = None
         self.embeddings = OpenAIEmbeddings()
         self.llm = llm
+        self.llm.model_name = ("gpt-4o",)
 
         self.client = mongo
         self.db = self.client["kaggle_agent"]

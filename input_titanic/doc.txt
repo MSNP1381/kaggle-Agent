@@ -1,0 +1,80 @@
+
+# spaceship-titanic
+## problem description:
+The Spaceship Titanic, carrying nearly 13,000 emigrants to three new exoplanets, collided with a spacetime anomaly near Alpha Centauri during its maiden voyage. As a result, almost half the passengers were transported to an alternate dimension. Your task is to predict which passengers were affected using data recovered from the ship's damaged systems to assist rescue efforts.
+target column is : "Transported"
+
+Data set Info
+
+### quantitative_analysis
+The dataset consists of 8693 rows and 14 columns. The numerical columns include Age, RoomService, FoodCourt, ShoppingMall, Spa, and VRDeck. The Age column has a mean of approximately 28.83 years, with a standard deviation of 14.49, indicating a relatively young passenger demographic. The maximum values for RoomService, FoodCourt, ShoppingMall, Spa, and VRDeck show significant outliers, particularly in RoomService (max: 14327) and FoodCourt (max: 29813), which may skew the analysis. The target variable, Transported, is binary, indicating whether a passenger was transported or not. The distribution of the target variable should be examined for class imbalance, which could affect model performance. Missing values are present in several columns, with CryoSleep, Cabin, Destination, Age, VIP, and various spending categories having significant amounts of missing data, which could impact the analysis and model training if not handled properly.
+
+### qualitative_analysis
+The dataset contains several categorical variables: HomePlanet, CryoSleep, Cabin, Destination, and VIP. HomePlanet has 3 unique values, while Destination also has 3 unique values, indicating a limited range of options. CryoSleep and VIP are binary features. The Cabin variable has a high cardinality with 6560 unique entries, which may complicate analysis. Missing data is prevalent across multiple columns, particularly in HomePlanet (201 missing), CryoSleep (217 missing), and VIP (203 missing). The missing data could be due to incomplete records from the damaged computer system. The relationships between features and the target variable should be explored, particularly how spending in RoomService, FoodCourt, ShoppingMall, Spa, and VRDeck correlates with the likelihood of being transported. Additionally, the impact of Age, HomePlanet, and CryoSleep on the target variable should be analyzed to identify potential predictors.
+
+## scraped data
+
+### dataset_info
+Shape: (8693, 14)
+Columns: ['PassengerId', 'HomePlanet', 'CryoSleep', 'Cabin', 'Destination', 'Age', 'VIP', 'RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck', 'Name', 'Transported']
+Data Types:
+PassengerId      object
+HomePlanet       object
+CryoSleep        object
+Cabin            object
+Destination      object
+Age             float64
+VIP              object
+RoomService     float64
+FoodCourt       float64
+ShoppingMall    float64
+Spa             float64
+VRDeck          float64
+Name             object
+Transported        bool
+dtype: object
+Missing Values:
+PassengerId       0
+HomePlanet      201
+CryoSleep       217
+Cabin           199
+Destination     182
+Age             179
+VIP             203
+RoomService     181
+FoodCourt       183
+ShoppingMall    208
+Spa             183
+VRDeck          188
+Name            200
+Transported       0
+dtype: int64
+Unique Values:
+PassengerId     8693
+HomePlanet         3
+CryoSleep          2
+Cabin           6560
+Destination        3
+Age               80
+VIP                2
+RoomService     1273
+FoodCourt       1507
+ShoppingMall    1115
+Spa             1327
+VRDeck          1306
+Name            8473
+Transported        2
+dtype: int64
+Numerical Columns Summary:
+               Age   RoomService     FoodCourt  ShoppingMall           Spa        VRDeck
+count  8514.000000   8512.000000   8510.000000   8485.000000   8510.000000   8505.000000
+mean     28.827930    224.687617    458.077203    173.729169    311.138778    304.854791
+std      14.489021    666.717663   1611.489240    604.696458   1136.705535   1145.717189
+min       0.000000      0.000000      0.000000      0.000000      0.000000      0.000000
+25%      19.000000      0.000000      0.000000      0.000000      0.000000      0.000000
+50%      27.000000      0.000000      0.000000      0.000000      0.000000      0.000000
+75%      38.000000     47.000000     76.000000     27.000000     59.000000     46.000000
+max      79.000000  14327.000000  29813.000000  23492.000000  22408.000000  24133.000000
+
+### evaluation_metric
+classification accuracy

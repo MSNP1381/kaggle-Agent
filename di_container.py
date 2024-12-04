@@ -9,7 +9,6 @@ from psycopg import Connection
 from pymongo import MongoClient
 
 from code_generation_agent import CodeGenerationAgent
-from code_manager import KaggleCodeManager
 from config_reader import config_reader
 from data_utils import DataUtils
 
@@ -55,8 +54,9 @@ class AppModule(Module):
     @provider
     def provide_llm(self) -> ChatOpenAI:
         return ChatOpenAI(
-            model=config_reader.get("API", "model"),
-            temperature=config_reader.getfloat("API", "temperature"),
+            model="gpt-4o",
+            # temperature=config_reader.getfloat("API", "temperature"),
+            temperature=0,
         )
 
     @singleton
@@ -122,14 +122,6 @@ class AppModule(Module):
         return CodeGenerationAgent(
             llm, config, nb_executor=nb_executor, memory_agent=memory_agent
         )
-
-    @singleton
-    @provider
-    def provide_code_manager(
-        self, code_gen_agent: CodeGenerationAgent
-    ) -> KaggleCodeManager:
-        code_agent = KaggleCodeManager(code_gen_agent)
-        return code_agent
 
 
 def create_injector():

@@ -107,6 +107,7 @@ class DataUtils:
         return output
 
     def _load_dataset(self, dataset_path: str) -> Optional[pd.DataFrame]:
+        dataset_path = "./input/train.csv"
         # Fallback to loading from CSV
         try:
             return pd.read_csv(dataset_path)
@@ -126,10 +127,10 @@ def main():
 
     try:
         llm = ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL", "gpt-4"),
+            # model=os.getenv("OPENAI_MODEL", "gpt-4o"),
+            model="gpt-4o",
             # http_client=proxy,
             temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.0")),
-            api_key=os.getenv("OPENAI_API_KEY"),
         )
     except ValueError as e:
         print(f"Error initializing ChatOpenAI: {str(e)}")

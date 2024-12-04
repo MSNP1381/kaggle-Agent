@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 from injector import inject
 from langgraph.graph import END, START, StateGraph
 from pymongo import MongoClient
-
-from code_manager import KaggleCodeManager
 from data_utils import DataUtils
 from di_container import create_injector
 from executors.nbexecutor_jupyter import JupyterExecutor
@@ -18,6 +16,7 @@ from persistence.mongo import MongoDBSaver
 
 # from planner_agent import KaggleProblemPlanner
 from planner_agent import KaggleProblemPlanner
+from code_generation_agent import CodeGenerationAgent
 
 # from langfuse.callback import CallbackHandler
 from states.main import KaggleProblemState
@@ -35,7 +34,7 @@ class KaggleProblemSolver:
         scraper: ScrapeKaggle,
         planner: KaggleProblemPlanner,
         # re_planner: KaggleProblemRePlanner,
-        code_manager: KaggleCodeManager,
+        code_manager: CodeGenerationAgent,
         enhancer: KaggleTaskEnhancer,
         data_utils: DataUtils,
         # handler: CallbackHandler,
@@ -53,8 +52,8 @@ class KaggleProblemSolver:
         # self.handler = handler
 
     def _init_state(self, url: str):
-        self.dataset_path = "./ongoing/train.csv"
-        self.test_dataset_path = "./ongoing/test.csv"
+        self.dataset_path = "./input/train.csv"
+        self.test_dataset_path = "./input/test.csv"
 
         return KaggleProblemState(
             **{
@@ -85,7 +84,7 @@ class KaggleProblemSolver:
             return END
         return "enhancer"
 
-    def compile(self, checkpointer):
+    def compile(self, checkpointer, interrupt_before=None):
         graph_builder = StateGraph(KaggleProblemState)
         graph_builder.add_node("scraper", self.scraper)
         graph_builder.add_node("code_manager", self.code_manager)
@@ -112,12 +111,14 @@ class KaggleProblemSolver:
 
         # memory = SqliteSaver.from_conn_string(":memory:")
 
-        self.graph = graph_builder.compile(checkpointer=checkpointer)
+        self.graph = graph_builder.compile(
+            checkpointer=checkpointer, interrupt_before=interrupt_before
+        )
         return self.graph
 
-    def invoke(self, url: str, debug=False):
+    def invoke(self, url: str, thread_id, debug=False):
         state = self._init_state(url)
-
+        # self.config["configurable"]["thread_id"] = thread_id
         return self.graph.invoke(state, config=self.config, debug=debug)
 
     def submit_to_kaggle(self, competition: str, submission_file: str, message: str):

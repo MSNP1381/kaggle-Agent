@@ -35,10 +35,9 @@ def main():
     # Initialize OpenAI LLM
     try:
         llm = ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL", "gpt-4"),
+            model=os.getenv("OPENAI_MODEL", "gpt-4o"),
             http_client=proxy,
             temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.0")),
-            api_key=os.getenv("OPENAI_API_KEY"),
         )
     except ValueError as e:
         print(f"Error initializing ChatOpenAI: {str(e)}")

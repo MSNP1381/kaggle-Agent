@@ -1,3 +1,4 @@
+imblearn
 kaggle
 lightgbm
 matplotlib
@@ -9,5 +10,6 @@ plotly
 scikit-learn
 scipy
 seaborn
+shap
 statsmodels
 xgboost

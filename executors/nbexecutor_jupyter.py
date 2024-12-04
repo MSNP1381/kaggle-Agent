@@ -89,7 +89,7 @@ class JupyterExecutor(NotebookExecutorInterface):
 
         while True:
             try:
-                msg = self.kc.get_iopub_msg(timeout=10)
+                msg = self.kc.get_iopub_msg(timeout=180)
                 if msg["parent_header"].get("msg_id") == msg_id:
                     if msg["msg_type"] == "stream":
                         output = msg["content"]["text"]
