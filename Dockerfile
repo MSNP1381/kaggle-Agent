@@ -9,10 +9,13 @@ COPY ./notebook_requirements.txt ./requirements.txt
 
 RUN python -m pip install -r requirements.txt
 
-
 RUN python -m nltk.downloader punkt
 
 COPY .env.docker .env
+
+# Install poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="/home/jovyan/.local/bin:$PATH"
 
 # Uncomment and set your token value here
 # ENV TOKEN your_token_value_here
@@ -26,6 +29,5 @@ CMD ["jupyter", "notebook", \
     "--FileContentsManager.allow_hidden=True"]
 
 EXPOSE 8888
-
 
 WORKDIR /home/jovyan/working
