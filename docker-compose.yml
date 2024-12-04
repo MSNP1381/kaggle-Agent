@@ -1,11 +1,10 @@
+version: '3.8'
+
 services:
   # MongoDB service from the first compose
   mongodb:
     image: mongo:latest
     container_name: mongodb
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=${NB_USER}
-      - MONGO_INITDB_ROOT_PASSWORD=${TOKEN}
     ports:
       - "27017:27017"
     volumes:
@@ -15,34 +14,14 @@ services:
 
   # App service from the first compose
   jupyter-app:
-    build:
-      context: ./notebook
-      dockerfile: ../Dockerfile
-    env_file:
-      - .env.docker
-    # depends_on:
-    #   - mongodb
+    build: .
+    volumes:
+      - .:/workspace
+    command: sleep infinity
     ports:
       - "8888:8888"
 
-  # Langfuse server from the second compose
-  langfuse-server:
-    image: langfuse/langfuse:2.8
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
-      - NEXTAUTH_SECRET=mysecret
-      - SALT=mysalt
-      - ENCRYPTION_KEY=3c97d566b8fd80e8e7bb8dbecb36c72db049003a37899f1c4c83cdca1d68c211
-      - NEXTAUTH_URL=http://localhost:3000
-      - TELEMETRY_ENABLED=${TELEMETRY_ENABLED:-true}
-      - LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES=${LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES:-false}
-    env_file:
-      - .env.docker
+
 
   # Postgres DB from the second compose
   db:
@@ -63,6 +42,7 @@ services:
       - database_data:/var/lib/postgresql/data
     env_file:
       - .env.docker
+
 
 volumes:
   mongo-data:
