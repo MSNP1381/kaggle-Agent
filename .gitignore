@@ -176,7 +176,6 @@ ongoing/*
 input/*
 working/*
 *.csv
-*.json
 *.pkl
 *.pickle
 *.npy
@@ -187,3 +186,4 @@ working/*
 output/
 .langgraph_api
 .ruff_cache
+input*

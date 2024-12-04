@@ -1,7 +1,7 @@
 pre-commitdefault_language_version:
   python: python3.9
 
-default_stages: [commit]
+default_stages: [pre-commit]
 default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
@@ -39,11 +39,3 @@ repos:
         entry: ^(break|build|ci|docs|feat|fix|perf|refactor|style|test|ops|hotfix|release|maint|init|enh|revert)\([\w,\.,\-,\(,\),\/]+\)(!?)(:)\s{1}([\w,\W,:]+)
         stages: [commit-msg]
         args: [--negate]
-
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.3
-    hooks:
-      - id: prettier
-        additional_dependencies:
-          - prettier@2.1.2
-          - "@prettier/plugin-xml@0.12.0"

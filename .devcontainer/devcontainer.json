@@ -1,0 +1,10 @@
+{
+  "dockerComposeFile": "docker-compose.yml",
+  "extensions": [
+    "ms-azuretools.vscode-docker"
+  ],
+  "name": "Kaggle Agent Dev Container",
+  "postCreateCommand": "pipx install poetry && poetry install",
+  "service": "jupyter-app",
+  "workspaceFolder": "/workspace"
+}
