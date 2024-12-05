@@ -54,7 +54,7 @@ class AppModule(Module):
     @provider
     def provide_llm(self) -> ChatOpenAI:
         return ChatOpenAI(
-            model="gpt-4o",
+            model='gpt-4o',
             # temperature=config_reader.getfloat("API", "temperature"),
             temperature=0,
         )

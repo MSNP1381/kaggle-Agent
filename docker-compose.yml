@@ -4,6 +4,7 @@ services:
   # MongoDB service from the first compose
   mongodb:
     image: mongo:latest
+    restart: always
     container_name: mongodb
     ports:
       - "27017:27017"
@@ -12,14 +13,14 @@ services:
     env_file:
       - .env.docker
 
-  # App service from the first compose
-  jupyter-app:
-    build: .
-    volumes:
-      - .:/workspace
-    command: sleep infinity
-    ports:
-      - "8888:8888"
+  # # App service from the first compose
+  # jupyter-app:
+  #   build: .
+  #   volumes:
+  #     - .:/workspace
+  #   command: sleep infinity
+  #   ports:
+  #     - "8888:8888"
 
 
 

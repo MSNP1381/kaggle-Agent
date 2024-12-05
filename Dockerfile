@@ -14,16 +14,13 @@ RUN python -m nltk.downloader punkt
 
 COPY .env.docker .env
 
-# Uncomment and set your token value here
-# ENV TOKEN your_token_value_here
-CMD ["jupyter", "notebook", \
-    "--ip=0.0.0.0", \
-    "--port=8888", \
-    "--NotebookApp.token=''", \
-    "--NotebookApp.password=''", \
-    "--NotebookApp.allow_origin='*'", \
-    "--NotebookApp.open_browser=False", \
-    "--FileContentsManager.allow_hidden=True"]
+USER ${NB_UID}
+RUN mamba install --yes jupyter_kernel_gateway ipykernel &&     mamba clean --all -f -y &&     fix-permissions "${CONDA_DIR}" &&     fix-permissions "/home/${NB_USER}"
+
+ENV TOKEN="UNSET"
+CMD python -m jupyter kernelgateway --KernelGatewayApp.ip=0.0.0.0     --KernelGatewayApp.port=8888     --KernelGatewayApp.auth_token="${TOKEN}"     --JupyterApp.answer_yes=true     --JupyterWebsocketPersonality.list_kernels=true
+
+EXPOSE 8888
 
 EXPOSE 8888
 

@@ -13,3 +13,5 @@ seaborn
 shap
 statsmodels
 xgboost
+torch
+transformers

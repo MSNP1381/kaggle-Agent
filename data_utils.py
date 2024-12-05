@@ -31,6 +31,7 @@ class DataUtils:
     ):
         self.config = config
         self.llm = llm
+        self.llm.model_name="gpt-4o"
         self.mongo_client = mongo_client
         self.dataset_analysis_prompt = ChatPromptTemplate.from_messages(
             [("system", DATASET_ANALYSIS_PROMPT)]

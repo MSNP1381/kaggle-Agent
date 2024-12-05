@@ -31,10 +31,11 @@
     ipython = "^8.27.0"
     langchain-community = "^0.3.2"
     faiss-cpu = "^1.9.0"
-    langchain-chroma = "^0.1.4"
+    langchain-chroma = ">=0.1.2"
     pre-commit = "^4.0.1"
     imblearn = "^0.0"
-    torch = { url = "https://download.pytorch.org/whl/cu124/torch-2.5.1%2Bcu124-cp312-cp312-win_amd64.whl"}
+    pysqlite3-binary = "^0.5.4"
+    tabulate = "^0.9.0"
 
 
 

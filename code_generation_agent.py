@@ -16,6 +16,7 @@ from prompts.code_generation_prompt import (
 )
 from states.code import Code
 from states.main import KaggleProblemState
+# from states.memory import MemoryAgent
 from states.memory import MemoryAgent
 from utils import (
     CellError,
@@ -134,7 +135,7 @@ class CodeGenerationAgent:
 
         self.workflow = self.create_workflow()
 
-        self.memory_agent = memory_agent
+        # self.memory_agent = memory_agent
 
         self.debugging_prompt = DEBUGGING_PROMPT
         self.new_solution_prompt = NEW_SOLUTION_PROMPT
@@ -360,7 +361,7 @@ class CodeGenerationAgent:
             str(result.get("result", "")),
         )
         task_codes.append(task_code_new)
-        self.memory_agent.add_example(*map(str, task_code_new))
+        # self.memory_agent.add_example(*map(str, task_code_new))
 
         return {
             "task_codes_results": task_codes,
