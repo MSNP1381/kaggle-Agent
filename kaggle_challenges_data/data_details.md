@@ -1,45 +1,36 @@
-# Overview
 
-The data has been split into two groups:
 
-- training set (train.csv)
-- test set (test.csv)
+What files do I need?
+---------------------
 
-  **The training set** should be used to build your machine learning models. For the training set, we provide the outcome (also known as the “ground truth”) for each passenger. Your model will be based on “features” like passengers’ gender and class. You can also use [feature engineering](https://triangleinequality.wordpress.com/2013/09/08/basic-feature-engineering-with-the-titanic-data/) to create new features.
+You'll need **train.csv**, **test.csv** and **sample\_submission.csv**.
 
-**The test set** should be used to see how well your model performs on unseen data. For the test set, we do not provide the ground truth for each passenger. It is your job to predict these outcomes. For each passenger in the test set, use the model you trained to predict whether or not they survived the sinking of the Titanic.
+What should I expect the data format to be?
+-------------------------------------------
 
-We also include **gender_submission.csv**, a set of predictions that assume all and only female passengers survive, as an example of what a submission file should look like.
+Each sample in the train and test set has the following information:
 
-## Data Dictionary
+* The `text` of a tweet
+* A `keyword` from that tweet (although this may be blank!)
+* The `location` the tweet was sent from (may also be blank)
 
-| **Variable** | **Definition**                              | **Key**                                           |
-| ------------ | ------------------------------------------- | ------------------------------------------------- |
-| survival     | Survival                                    | 0 \= No, 1 \= Yes                                 |
-| pclass       | Ticket class                                | 1 \= 1st, 2 \= 2nd, 3 \= 3rd                      |
-| sex          | Sex                                         |                                                   |
-| Age          | Age in years                                |                                                   |
-| sibsp        | \# of siblings / spouses aboard the Titanic |                                                   |
-| parch        | \# of parents / children aboard the Titanic |                                                   |
-| ticket       | Ticket number                               |                                                   |
-| fare         | Passenger fare                              |                                                   |
-| cabin        | Cabin number                                |                                                   |
-| embarked     | Port of Embarkation                         | C \= Cherbourg, Q \= Queenstown, S \= Southampton |
+What am I predicting?
+---------------------
 
-### Variable Notes
+You are predicting whether a given tweet is about a real disaster or not. If so, predict a `1`. If not, predict a `0`.
 
-**pclass**: A proxy for socio\-economic status (SES)
-1st \= Upper
-2nd \= Middle
-3rd \= Lower
+Files
+-----
 
-**age**: Age is fractional if less than 1\. If the age is estimated, is it in the form of xx.5
+* **train.csv** - the training set
+* **test.csv** - the test set
+* **sample\_submission.csv** - a sample submission file in the correct format
 
-**sibsp**: The dataset defines family relations in this way...
-Sibling \= brother, sister, stepbrother, stepsister
-Spouse \= husband, wife (mistresses and fiancés were ignored)
+Columns
+-------
 
-**parch**: The dataset defines family relations in this way...
-Parent \= mother, father
-Child \= daughter, son, stepdaughter, stepson
-Some children travelled only with a nanny, therefore parch\=0 for them.
+* `id` - a unique identifier for each tweet
+* `text` - the text of the tweet
+* `location` - the location the tweet was sent from (may be blank)
+* `keyword` - a particular keyword from the tweet (may be blank)
+* `target` - in **train.csv** only, this denotes whether a tweet is about a real disaster (`1`) or not (`0`)

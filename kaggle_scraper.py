@@ -3,6 +3,7 @@ import os
 import pprint
 import unittest
 import zipfile
+import logging
 from unittest.mock import MagicMock
 
 import httpx
@@ -58,11 +59,11 @@ class ScrapeKaggle:
         self.config = config
         self.mongo_dict = {}
         http_client = None
-        if proxy:
-            http_client = httpx.Client(proxy=proxy)
+        # if proxy:
+        # http_client = httpx.Client(proxy=proxy)
         self.llm = ChatOpenAI(
             model="gpt-4o",
-            http_client=http_client,
+            # http_client=http_client,
             temperature=0,
         )
 
@@ -71,6 +72,10 @@ class ScrapeKaggle:
         # Initialize Kaggle API
         self.kaggle_api = KaggleApi()
         self.kaggle_api.authenticate()
+
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("ScrapeKaggle initialized")
 
     def extract_challenge_details(self, challenge_url):
         """
@@ -82,9 +87,10 @@ class ScrapeKaggle:
         Returns:
             dict: A dictionary containing the challenge details.
         """
-        # try:
+        self.logger.info(f"Extracting challenge details for URL: {challenge_url}")
         data = self.scraped_data_collection.find_one({"challenge_url": challenge_url})
         if data:
+            self.logger.info("Data found in database")
             d = {
                 "description": data["scraped_data"]["description"],
                 "evaluation": data["scraped_data"]["evaluation"],
@@ -93,8 +99,9 @@ class ScrapeKaggle:
             self.mongo_dict.update({"scraped_data": d})
             return d
 
+        self.logger.info("Data not found in database, scraping from web")
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
+        # options.add_argument("--headless")
         proxy = os.getenv("HTTP_PROXY")
         print(proxy)
         p = Proxy()
@@ -128,17 +135,20 @@ class ScrapeKaggle:
         ).get_attribute("innerHTML")
 
         driver.get(append_url(challenge_url, "data"))
-        driver.implicitly_wait(5)
-
         # Wait for the challenge details to load
         wait = WebDriverWait(driver, 35)
         wait.until(
-            EC.presence_of_element_located((By.XPATH, "//h3[text()='Overview']"))
+            EC.presence_of_element_located(
+                (
+                    By.CSS_SELECTOR,
+                    "#site-content > div:nth-child(2) > div > div > div.sc-kGGICJ.gdXvLH > div.sc-fOkpiL.gnTWUc > div.sc-sYGvw.jspRTt > div > div:nth-child(2) > div > div.sc-eJqIHI > div > div > div",
+                )
+            )
         )
 
         challenge_data_details = driver.find_element(
-            By.XPATH,
-            "/html/body/main/div[1]/div/div[5]/div[2]/div/div/div[6]/div[1]/div[1]/div/div[2]/div",
+            By.CSS_SELECTOR,
+            "#site-content > div:nth-child(2) > div > div > div.sc-kGGICJ.gdXvLH > div.sc-fOkpiL.gnTWUc > div.sc-sYGvw.jspRTt > div > div:nth-child(2) > div > div.sc-eJqIHI.eRnvzm > div > div > div",
         ).get_attribute("innerHTML")
 
         d = {
@@ -150,9 +160,10 @@ class ScrapeKaggle:
             challenge_url += "/"
         self.mongo_dict.update({"challenge_url": challenge_url, "scraped_data": d})
         for i, j in d.items():
-            with open(f"./kaggle_challenges_data/{i}.md", "w") as f:
+            with open(f"./kaggle_challenges_data/{i}.md", "w", encoding="utf-8") as f:
                 f.write(j)
         driver.quit()
+        self.logger.info("Challenge details extracted successfully")
         return d
 
     def get_saved_challenge_data(self, challenge_url):
@@ -165,6 +176,7 @@ class ScrapeKaggle:
         Returns:
             dict: A dictionary containing the saved challenge data, or None if not found.
         """
+        self.logger.info(f"Retrieving saved challenge data for URL: {challenge_url}")
         if not challenge_url.endswith("/"):
             challenge_url += "/"
         return self.scraped_data_collection.find_one({"challenge_url": challenge_url})
@@ -172,6 +184,7 @@ class ScrapeKaggle:
     def _init_state(
         self,
     ):
+        self.logger.info("Initializing state")
         self.dataset_path = "./input/train.csv"
         self.test_dataset_path = "./input/test.csv"
 
@@ -182,6 +195,7 @@ class ScrapeKaggle:
         }
 
     def __call__(self, state: KaggleProblemState):
+        self.logger.info(f"Processing state for challenge URL: {state.challenge_url}")
         challenge_url = state.challenge_url
         self.mongo_dict["challenge_url"] = challenge_url
         download_info = self.download_challenge_data(challenge_url)
@@ -214,6 +228,7 @@ class ScrapeKaggle:
             ),
         }
         d = self._init_state()
+        self.logger.info("State processed successfully")
         return base_response | d
 
     def download_challenge_data(self, challenge_url):
@@ -226,6 +241,7 @@ class ScrapeKaggle:
         Returns:
             dict: A dictionary containing paths to the downloaded data and leaderboard info.
         """
+        self.logger.info(f"Downloading challenge data for URL: {challenge_url}")
         ls_dir = os.listdir("./input")
         if ls_dir:
             return {
@@ -259,7 +275,7 @@ class ScrapeKaggle:
                     with zipfile.ZipFile(file_path, "r") as zip_ref:
                         zip_ref.extractall(ongoing_dir)
                     print(f"Decompressed {file_name}")
-            print(f"Successfully downloaded data for {competition_name}")
+            self.logger.info(f"Successfully downloaded data for {competition_name}")
 
             # Fetch leaderboard
             leaderboard = self.kaggle_api.competition_view_leaderboard(competition_name)
@@ -267,12 +283,12 @@ class ScrapeKaggle:
             with open(leaderboard_path, "w") as f:
                 json.dump(leaderboard, f, indent=2)
 
-            print(f"Successfully fetched leaderboard for {competition_name}")
+            self.logger.info(f"Successfully fetched leaderboard for {competition_name}")
 
             return {"data_path": ongoing_dir, "leaderboard_path": leaderboard_path}
 
         except ApiException as e:
-            print(f"Error processing data for {competition_name}: {str(e)}")
+            self.logger.error(f"Error processing data for {competition_name}: {str(e)}")
             return None
 
     def summarize_data(self, description, evaluation, data_details):
@@ -287,6 +303,7 @@ class ScrapeKaggle:
         Returns:
             dict: A dictionary containing summarized challenge information.
         """
+        self.logger.info("Summarizing challenge data")
         description_prompt = ChatPromptTemplate.from_messages(
             CHALLENGE_DESCRIPTION_PROMPT, "mustache"
         )
@@ -332,7 +349,7 @@ class ScrapeKaggle:
                     }
                 },
             )
-
+        self.logger.info("Challenge data summarized successfully")
         return result
 
 

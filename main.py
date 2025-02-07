@@ -4,7 +4,8 @@ import logging
 
 import coloredlogs
 from dotenv import load_dotenv
-from langgraph.checkpoint.postgres import PostgresSaver
+
+# from langgraph.checkpoint.postgres import PostgresSaver
 from psycopg import Connection
 import time
 from agent import KaggleProblemSolver
@@ -35,7 +36,7 @@ injector, app_module = create_injector()
 
 postgres_client = injector.get(Connection)
 
-checkpointer = PostgresSaver(postgres_client)
+# checkpointer = PostgresSaver(postgres_client)
 
 # Get the KaggleProblemSolver instance from the injector
 solver = injector.get(KaggleProblemSolver)
@@ -53,4 +54,4 @@ if __name__ == "__main__":
         "*" * 20,
     )
     solver.invoke(url, thread_Id)
-    checkpointer.close()
+    # checkpointer.close()

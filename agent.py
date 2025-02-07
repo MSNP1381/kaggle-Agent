@@ -34,7 +34,7 @@ class KaggleProblemSolver:
         scraper: ScrapeKaggle,
         planner: KaggleProblemPlanner,
         # re_planner: KaggleProblemRePlanner,
-        code_manager: CodeGenerationAgent,
+        code_gen_agent: CodeGenerationAgent,
         enhancer: KaggleTaskEnhancer,
         data_utils: DataUtils,
         # handler: CallbackHandler,
@@ -46,7 +46,7 @@ class KaggleProblemSolver:
         self.scraper = scraper
         self.planner = planner
         # self.re_planner = re_planner
-        self.code_manager = code_manager
+        self.code_gen_agent = code_gen_agent
         self.enhancer = enhancer
         self.data_utils = data_utils
         # self.handler = handler
@@ -87,7 +87,7 @@ class KaggleProblemSolver:
     def compile(self, checkpointer, interrupt_before=None):
         graph_builder = StateGraph(KaggleProblemState)
         graph_builder.add_node("scraper", self.scraper)
-        graph_builder.add_node("code_manager", self.code_manager)
+        graph_builder.add_node("code_gen_agent", self.code_gen_agent)
         graph_builder.add_node("planner", self.planner)
         # graph_builder.add_node("re_planner", self.re_planner)
         # graph_builder.add_node("executor", self.executor)
@@ -100,11 +100,11 @@ class KaggleProblemSolver:
         graph_builder.add_edge("planner", "enhancer")
         # graph_builder.add_conditional_edges("planner", self.is_plan_done)
 
-        graph_builder.add_edge("enhancer", "code_manager")
+        graph_builder.add_edge("enhancer", "code_gen_agent")
         # graph_builder.add_edge("code_agent", "en")  # Connect code_agent to submission_node
         # graph_builder.add_edge("submission_node", "executor")
         graph_builder.add_conditional_edges(
-            "code_manager",
+            "code_gen_agent",
             self.is_plan_done,
             path_map={"enhancer": "enhancer", END: END},
         )

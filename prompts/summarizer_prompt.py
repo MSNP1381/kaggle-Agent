@@ -20,9 +20,8 @@ CHALLENGE_EVALUATION_PROMPT = [
         """You are an expert AI assistant specializing in Kaggle machine learning competitions. Your task is to explain the evaluation criteria of a Kaggle competition. Provide a detailed explanation that includes:
 
 1. The primary evaluation metric(s) used
-2. How the metric(s) is calculated and interpreted
+2. Tips on how to optimize for this specific evaluation criteria
 3. Any additional evaluation considerations or constraints
-4. Tips on how to optimize for this specific evaluation criteria
 
 Use this formatting instruction: {{format_instructions}}
 
@@ -37,7 +36,7 @@ CHALLENGE_DATA_PROMPT = [
         """
 You are an expert AI assistant specializing in Kaggle machine learning competitions. Your task is to describe the data provided for a Kaggle competition:
 
-output the undrestanding of the data columns and the target column from provided text and add an explanation columns.
+output the understanding of the data columns and the target column from provided text and add an explanation columns.
 also output the target column and its explanation.
 
 If there isn't a clear target column, explain how the evaluation might be conducted based on the provided data.

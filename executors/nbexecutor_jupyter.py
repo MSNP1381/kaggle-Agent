@@ -10,6 +10,7 @@ from jupyter_client import KernelManager
 from nbformat.v4 import new_code_cell, new_notebook, new_output
 
 from utils import CellError, CellResult, NotebookExecutorInterface
+from jupyter_client import KernelManager
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -27,23 +28,17 @@ class JupyterExecutor(NotebookExecutorInterface):
         )
 
     def kernel(self):
-        self.km = KernelManager(url=self.url, token=self.token)
-        logger.info("Starting kernel...")
-        self.km.start_kernel()
-        self.kc = self.km.client()
+        logger.info("Connecting to remote kernel...")
+
+        # Create and start a local kernel using KernelManager.
+        km = KernelManager(kernel_name="python3")
+        km.start_kernel()
+        self.kc = km.client()
+
+        # Start channel communications and wait for the kernel to become ready.
         self.kc.start_channels()
-
-        self.kc.wait_for_ready()
-        time.sleep(1)  # Give a short pause to ensure kernel is fully ready
-        logger.info("Kernel is ready.")
-
-        # Reset the kernel by executing a command to delete all variables
-        self.kc.execute("%reset -f")
-        self.is_restarted = True
-        logger.info("Kernel reset.")
-
-        # Wait until the kernel is ready
-        self.kc.wait_for_ready()
+        self.kc.wait_for_ready(timeout=60)
+        logger.info("Local kernel started.")
 
     def reset(self):
         logger.info("Resetting kernel...")

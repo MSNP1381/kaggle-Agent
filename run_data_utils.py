@@ -29,14 +29,14 @@ def main():
     load_dotenv()
 
     # Initialize proxy if needed
-    proxy_url = os.getenv("HTTP_PROXY_URL")
-    proxy = httpx.Client(proxies=proxy_url) if proxy_url else None
+    # proxy_url = os.getenv("HTTP_PROXY_URL")
+    # proxy = httpx.Client(proxies=proxy_url) if proxy_url else None
 
     # Initialize OpenAI LLM
     try:
         llm = ChatOpenAI(
             model=os.getenv("OPENAI_MODEL", "gpt-4o"),
-            http_client=proxy,
+            # http_client=proxy,
             temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.0")),
         )
     except ValueError as e:

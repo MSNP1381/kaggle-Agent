@@ -43,11 +43,10 @@ class KaggleTaskEnhancer:
             previous_result=previous_result,
             previous_codes=previous_codes,
             completed_tasks=state.get_executed_tasks(),
-            planned_tasks=str(state.planned_tasks),
+            plan=",\n".join(state.planned_tasks),
             future_tasks=str(state.get_future_tasks()),
             # relevant_context=relevant_context,
         )
-        print
         logger.debug("Invoking LLM for task enhancement with CoT reasoning")
         self.llm.model_name = "gpt-4o"
         print(self.llm.model_name)

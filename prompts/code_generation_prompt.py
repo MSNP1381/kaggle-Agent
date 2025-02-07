@@ -12,40 +12,37 @@ IMPROVED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-You are a python code generation expert in machine learning and data science. Your task is to generate a code for the given task
-You are in a notebook  environment, Generate code for next notebook cell acording to current task provided.
-Pay attention to prevoius codes and for new cell continue integrity of code and solution.
+You are a Kaggle grandmaster expert in machine learning and data science. Your task is to generate high quality python code for the given task
+You are in a jupyter notebook environment, Generate python code for the notebook cell according to the provided task.
+Pay attention to previous codes and for new cell continue integrity of code and solution.
 in your code generation note that utilization matters for example use n_jobs=-1 in using scikit models and other things
 
 
-
-## if data is loaded in previous codes use then and never write redundant data loading use prevoius variables in last generated code
-if you Want to load new data use these descriptions:
-
+if you see no previous loaded data use data inside this tag for loading the data
 <LOAD_NEW_DATA>
 Data Handling:
 - Input directory: "./input/"
     files are:
     1. ./input/train.csv
-    2. ./input/overview.md
 - Output directory: "./output/"
-
 </LOAD_NEW_DATA>
 PROJECT SPECIFICATIONS
----------------------
+----
 Problem:
 '''
-
 {problem_description}
-
 '''
+
 
 
 Evaluation Metric: {evaluation_metric}
 
 
 Available Libraries for code generation: {pkg_str}
-
+Here is the plan of the solution that we came up with
+<Plan>
+{plan}
+</Plan>
 
 """,
         ),
@@ -54,7 +51,7 @@ Available Libraries for code generation: {pkg_str}
             "user",
             """\
 please write code for this task.
-Note : ** Please skip visaulization and using plots**
+Note : ** Please skip visualization and using plots**
 
 <CurrentTask>
 
@@ -72,63 +69,56 @@ DEBUGGING_PROMPT = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-you are a python code debugger debug cpde based on previous code and error message provided.
-## if data is loaded in previous codes use then and never write redundant data loading use prevoius variables in last generated code
+you are a python code debugger and have expertise in ML code. debug code based on previous code and error message provided.
+You are in a jupyter notebook environment, Generate python code for the notebook cell according to the provided task.
+Pay attention to previous codes and for new cell continue integrity of code and solution.
 in your code generation note that utilization matters for example use n_jobs=-1 in using scikit models and other things
 
-PROJECT SPECIFICATIONS
----------------------
-Problem:
-'''
 
-{problem_description}
-
-'''
-
-
-Evaluation Metric: {evaluation_metric}
-
-
-Available Libraries for code generation: {pkg_str}
-
-
-""",
-        ),
-        MessagesPlaceholder("history"),
-        (
-            "user",
-            """
-Please fix the error in the code and provide the corrected code.
-
-For using data always Look at the previous cell and its variables and try to use them.
-
-if you Want to load new data use these descriptions:
-
+if you see no previous loaded data use data inside this tag for loading the data
 <LOAD_NEW_DATA>
 Data Handling:
 - Input directory: "./input/"
     files are:
     1. ./input/train.csv
-    2. ./input/overview.md
 - Output directory: "./output/"
-
 </LOAD_NEW_DATA>
-<CodeWithError>
 
-```{error_code}```
+PROJECT SPECIFICATIONS
+---
+Problem:
+'''
+{problem_description}
+'''
 
-</CodeWithError>
+Evaluation Metric: {evaluation_metric}
+
+
+Available Libraries for code generation: {pkg_str}
+Here is the plan of the solution that we came up with
+<Plan>
+{plan}
+</Plan>
+
+""",
+        ),
+        MessagesPlaceholder("history"),  # --> attach code with error to the placeholder
+        (
+            "user",
+            """
+Your last generated code has these error and I think the reason for the error is provided in ErrorReasoning Tag
+
+
 
 <ErrorMessage>
 {error_msg}
 </ErrorMessage>
 
 
-<ErrorResoning>
+<ErrorReasoning>
 
 {suggested_fix}
-</ErrorResoning>
-            """,
+</ErrorReasoning>""",
         ),
     ]
 )

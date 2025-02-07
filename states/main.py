@@ -60,7 +60,7 @@ class KaggleProblemState(BaseModel):
     def __repr__(self) -> str:
         return self.model_dump_json(indent=1)
 
-    def get_previous_result(self, last_n: int = 1) -> str:
+    def get_previous_result(self, last_n: int = 2) -> str:
         """
         Get the result of the previous task(s).
 
@@ -74,14 +74,14 @@ class KaggleProblemState(BaseModel):
             return "No previous results available."
 
         results = []
-        for i, (enhanced_task, _, result) in enumerate(
+        for i, (enhanced_task, code, result) in enumerate(
             self.task_codes_results[-last_n:][::-1], 1
         ):
-            if len(result) > 250:
-                result = result[:250] + "..."
+            if len(result) > 300:
+                result = result[:300] + "..."
             results.append(
-                f"Previous Task {i}:\n"
-                f"Task: {str(enhanced_task)}\n"
+                f"<Task>{str(enhanced_task)}</Task>\n"
+                f"<Code>{str(code)}</Code>\n"
                 f"Result:\n{result}\n"
             )
 
@@ -97,9 +97,9 @@ class KaggleProblemState(BaseModel):
             history += [
                 (
                     "human",
-                    """please write code for this task.\n\n<CurrentTask>\n{t}\n</CurrentTask>""",
+                    "<Task>\n{t}\n</Task>",
                 ),
-                ("ai", "<CODE>" + c.model_dump_json() + "</CODE>"),
+                ("ai", "<CODE>\n" + c.code + "\n</CODE>"),
                 ("human", "Result is :\n\n" + str(r)),
             ]
         return history

@@ -31,6 +31,7 @@ class DataUtils:
     ):
         self.config = config
         self.llm = llm
+        print(llm.model_name, llm.temperature)
         self.mongo_client = mongo_client
         self.dataset_analysis_prompt = ChatPromptTemplate.from_messages(
             [("system", DATASET_ANALYSIS_PROMPT)]
@@ -42,6 +43,7 @@ class DataUtils:
     ) -> DatasetAnalysis:
         data_initial_info = self._generate_dataset_overview(dataset)
         dataset_head = dataset.head().to_markdown()
+        print(self.llm.model_name, self.llm.temperature)
 
         format_instructions = self.output_parser.get_format_instructions()
         response = (

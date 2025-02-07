@@ -27,9 +27,19 @@ class Task(BaseModel):
 class Plan(BaseModel):
     tasks: List[Task] = Field(description="List of tasks for a plan with their details")
 
-    @property
     def to_list(self) -> List[str]:
-        return [f"** {task.task_title} **\n{task.task_details}" for task in self.tasks]
+        task_list = []
+        for task in self.tasks:
+            task_list.append(
+                f"""\n<TaskTitle>
+{task.task_title}
+</TaskTitle>
+<TaskDetails>
+{task.task_details}
+</TaskDetails>\n
+"""
+            )
+        return task_list
 
 
 class KaggleProblemPlanner:
@@ -85,7 +95,7 @@ class KaggleProblemPlanner:
             logger.info("Plan generated successfully")
             logger.info(f"Generated plan tasks count: {len(response.tasks)}")
 
-            tasks = response.to_list
+            tasks = response.to_list()
             return tasks
 
         except Exception as e:

@@ -49,26 +49,27 @@ graph TB
     B --> G[Data Utils]
     G --> D[Planner]
     D --> F[Enhancer]
-    F --> C[Code Agent]
-    C --> E[Executor]
+    F --> I
     H((Finish))
 
     subgraph Code_Agent_Process [Code Agent Process]
         style Code_Agent_Process fill:#cfc,stroke:#333,stroke-width:1px
         I((Start))
         J[Generate Code]
-        K{Is Code Valid?}
+        K{Ran Error Free?}
         L((Finish))
+        M[Reflect On Error]
 
         I --> J
         J --> K
         K -- Yes --> L
-        K -- No --> J
+        K -- No --> M
+        M --> J
     end
 
     %% Link the main process to subgraph
-    C -->|Initiates| I
-    L -->|Returns| E
+
+    L -->|Returns| E[Executor]
 
     %% Annotations
     classDef annotation fill:#fff,stroke:none,color:#333,font-size:12px;
@@ -86,25 +87,25 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
 
 1. Clone this repo faster than you can say "git":
 
-   ```
+   ```bash
    git clone https://github.com/msnp1381/kaggle-agent.git
    ```
 
 2. Start the required services using Docker Compose:
 
-   ```
+   ```bash
    docker-compose up -d
    ```
 
 3. Install Poetry if you haven't already:
 
-   ```
+   ```bash
    curl -sSL https://install.python-poetry.org | python3 -
    ```
 
 4. Set up the Python environment:
 
-   ```
+   ```bash
    poetry install
    ```
 
@@ -112,7 +113,7 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
 
    - Copy the `.env.template` file to `.env`:
 
-     ```
+     ```bash
      cp .env.template .env
      ```
 
@@ -121,7 +122,7 @@ This isn't just any graph – it's a visual symphony of our agents working in ha
 
 6. Run the main script:
 
-   ```
+   ```bash
    poetry run python main.py
    ```
 

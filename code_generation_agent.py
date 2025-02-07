@@ -1,5 +1,6 @@
 import logging
 import re
+from turtle import st
 from typing import List, TypedDict
 from langchain.prompts import ChatPromptTemplate
 from injector import inject
@@ -33,46 +34,30 @@ logger = logging.getLogger(__name__)
 
 def remove_color(text: str) -> str:
     """
-
     Clean the text by removing ANSI color codes, escape sequences, and other special characters.
 
     This function is particularly useful for cleaning stdout and error messages from Python exceptions.
-
 
     Args:
 
         text (str): The input text to clean.
 
-
     Returns:
 
         str: The cleaned text.
     """
-
     # Remove ANSI escape sequences
-
     ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-
     text = ansi_escape.sub("", text)
-
     # Remove other escape sequences
-
     text = re.sub(r"\x1b\[\d+;\d+m", "", text)
-
     text = re.sub(r"\x1b\[\d+m", "", text)
-
     # Remove backspace characters
-
     text = re.sub(r"\b", "", text)
-
     # Remove carriage returns and line feeds
-
-    text = text.replace("\r", "").replace("\n", " ")
-
+    text = re.sub(r"[\r\n]+", " ", text)
     # Remove extra whitespace
-
     text = " ".join(text.split())
-
     return text
 
 
@@ -87,21 +72,14 @@ class GeneratedCode(BaseModel):
 
 class CodeGraphState(TypedDict):
     error: str
-
     error_name: str
-
     error_msg: str
     error_code: str
     generation: GeneratedCode
-
     iterations: int
-
     kaggle_state: KaggleProblemState
-
     result: str
-
     messages: List
-
     suggested_fix: str
 
 
@@ -111,43 +89,30 @@ class CodeGenerationAgent:
         self,
         llm: ChatOpenAI,
         config,
-        # proxy,
         nb_executor: NotebookExecutorInterface,
         memory_agent: MemoryAgent,
         max_iterations=1,
     ):
-        # self.proxy = proxy
-
         self.max_iterations = max_iterations
-
         self.config = config
-
         self.nb_executor = nb_executor
-
         self.code_gen_prompt = IMPROVED_CODE_GEN_PROMPT
-
         self.output_parser = StrOutputParser()
         llm = ChatOpenAI(model="gpt-4o", temperature=0)
         self.llm_raw = llm
-
         self.code_gen_chain = self.code_gen_prompt | self.llm_raw | self.output_parser
-
         self.workflow = self.create_workflow()
-
         self.memory_agent = memory_agent
-
         self.debugging_prompt = DEBUGGING_PROMPT
         self.new_solution_prompt = NEW_SOLUTION_PROMPT
-
-        # Define the OpenAI function for Kaggle submission
-
-        # Add the Kaggle submission function to the LLM's available functions
 
     def choose_base_prompt(self, state: CodeGraphState):
         if state.get("error") == "yes":
             if state["iterations"] <= 3:
                 logger.info("---DEBUGGING PROMPT Selected---")
-                return self.debugging_prompt
+                return self.debugging_prompt.partial(
+                    **self.create_error_message_history(state)
+                )
 
             else:
                 logger.info("---NEW SOLUTION PROMPT Selected---")
@@ -190,11 +155,11 @@ class CodeGenerationAgent:
                 "problem_description": kaggle_state.problem_description,
                 "current_task": task_formatted,
                 "evaluation_metric": evaluation_metric,
-                "planned_tasks": planned_tasks,
+                "plan": planned_tasks,
                 "error_code": state.get("error_code", ""),
                 "previous_tasks": kaggle_state.get_previous_result(2),
                 "relevant_context": relevant_context,
-                "history": kaggle_state.get_history(2),
+                # "history": kaggle_state.get_history(2),
                 "previous_codes": kaggle_state.get_executed_codes(2),
                 "few_shots_examples": few_shots_examples,
                 "current_code": str(state.get("generation", "")),
@@ -337,6 +302,38 @@ class CodeGenerationAgent:
         )
 
         return workflow.compile()
+
+    def create_error_message_history(self, state: CodeGraphState):
+        """error_msg
+        error_name
+        error_code"""
+        splitted_lines = state["error_msg"].split("\n")
+        init_lines = splitted_lines[:3][:1000]
+        fin_lines = splitted_lines[-3:][:1000]
+        mod_err_msg = (
+            f"error name:"
+            + state["error_name"]
+            + "---\n"
+            + "\n".join(init_lines)
+            + "...\n"
+            + "\n".join(fin_lines)
+        )
+
+        error_Code_hist = [
+            (
+                "human",
+                "<CurrentTask>\n"
+                + state["kaggle_state"].enhanced_tasks[-1].__str__()
+                + "<CurrentTask>",
+            ),
+            ("ai", state["error_code"]),
+        ]
+        messages = state["kaggle_state"].get_history(2)
+
+        return {
+            "error_msg": (mod_err_msg),
+            "history": messages + error_Code_hist,
+        }
 
     def __call__(self, state: KaggleProblemState, max_iterations=4):
         initial_state = {

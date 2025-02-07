@@ -18,7 +18,6 @@ class EnhancedTask(BaseModel):
     code_generation_recommendation: str = Field(
         description="The code generation recommendations"
     )
-    # implementation_guidance: str = Field(description="The implementation on gow to implemt code for the task and previous results")
 
     def __repr__(self) -> str:
         return self.model_dump_json(indent=1)
@@ -31,7 +30,5 @@ class EnhancedTask(BaseModel):
                 "**code genratin recommendations:**\n",
                 f"{self.code_generation_recommendation}",
                 "============",
-                # "**implementation guidance**:\n",
-                # f"{self.implementation_guidance}",
             ]
         )
