@@ -1,6 +1,5 @@
 import logging
 import re
-from turtle import st
 from typing import List, TypedDict
 from langchain.prompts import ChatPromptTemplate
 from injector import inject
@@ -64,7 +63,7 @@ def remove_color(text: str) -> str:
 class GeneratedCode(BaseModel):
     """python code for current task"""
 
-    code: str = Field(description="The python code")
+    code: str = Field(description="The python code for the task")
 
     def __str__(self) -> str:
         return self.code
@@ -91,20 +90,28 @@ class CodeGenerationAgent:
         config,
         nb_executor: NotebookExecutorInterface,
         memory_agent: MemoryAgent,
-        max_iterations=1,
+        max_iterations=3,
     ):
         self.max_iterations = max_iterations
         self.config = config
         self.nb_executor = nb_executor
         self.code_gen_prompt = IMPROVED_CODE_GEN_PROMPT
         self.output_parser = StrOutputParser()
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(
+            model="anthropic.claude-3-5-sonnet-20240620-v1:0", temperature=0
+        )
         self.llm_raw = llm
         self.code_gen_chain = self.code_gen_prompt | self.llm_raw | self.output_parser
+        self._ignore_warning()
         self.workflow = self.create_workflow()
         self.memory_agent = memory_agent
         self.debugging_prompt = DEBUGGING_PROMPT
         self.new_solution_prompt = NEW_SOLUTION_PROMPT
+
+    def _ignore_warning(self):
+        self.nb_executor.test_and_execute(
+            "import warnings;\nwarnings.filterwarnings('ignore')"
+        )
 
     def choose_base_prompt(self, state: CodeGraphState):
         if state.get("error") == "yes":
@@ -116,7 +123,9 @@ class CodeGenerationAgent:
 
             else:
                 logger.info("---NEW SOLUTION PROMPT Selected---")
-                return self.new_solution_prompt
+                return self.new_solution_prompt.partial(
+                    history=state["kaggle_state"].get_history(2)
+                )
         else:
             logger.info("---CODE GENERATION PROMPT Selected---")
             return self.code_gen_prompt.partial(
@@ -131,7 +140,7 @@ class CodeGenerationAgent:
 
         current_task = str(kaggle_state.enhanced_tasks[-1])
         plan = kaggle_state.planned_tasks
-        plan_str = "\n".join(f"{i+1}. {step}" for i, step in enumerate(plan))
+        plan_str = "\n".join(f"{i + 1}. {step}" for i, step in enumerate(plan))
         task_formatted = f"""For the following plan:
                 {plan_str}\n\nYou are tasked with executing step {1}, {current_task}."""
         # relevant_context = self.memory_agent.ask_docs(current_task)
@@ -311,7 +320,7 @@ class CodeGenerationAgent:
         init_lines = splitted_lines[:3][:1000]
         fin_lines = splitted_lines[-3:][:1000]
         mod_err_msg = (
-            f"error name:"
+            "error name:"
             + state["error_name"]
             + "---\n"
             + "\n".join(init_lines)
@@ -357,7 +366,7 @@ class CodeGenerationAgent:
             str(result.get("result", "")),
         )
         task_codes.append(task_code_new)
-        self.memory_agent.add_example(*map(str, task_code_new))
+        # self.memory_agent.add_example(*map(str, task_code_new))
 
         return {
             "task_codes_results": task_codes,

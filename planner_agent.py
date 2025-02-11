@@ -88,6 +88,7 @@ class KaggleProblemPlanner:
                     "problem_description": state.problem_description,
                     "quantitative_analysis": state.quantitative_analysis,
                     "qualitative_analysis": state.qualitative_analysis,
+                    "feature_recommendations": state.feature_recommendations,
                 },
                 config=self.config,
             )
@@ -148,7 +149,7 @@ class KaggleProblemPlanner:
         state2doc_write(state)
 
         logger.info("Initializing document retrieval")
-        self.memory.init_doc_retrieve()
+        # self.memory.init_doc_retrieve()
         logger.info("no_plan: " + str(os.getenv("no_plan")))
         if os.getenv("no_plan"):
             initial_plan = self.load_plan_from_json()
@@ -171,6 +172,7 @@ if __name__ == "__main__":
         problem_description="Test problem description",
         quantitative_analysis="Test quantitative analysis",
         qualitative_analysis="Test qualitative analysis",
+        feature_recommendations="Test feature recommendations",
     )
 
     planner = KaggleProblemPlanner(config=test_config, llm=test_llm, memory=test_memory)

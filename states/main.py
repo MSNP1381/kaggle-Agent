@@ -13,6 +13,7 @@ class KaggleProblemState(BaseModel):
     index: int = Field(default=-1)
     quantitative_analysis: str = Field(default="")
     qualitative_analysis: str = Field(default="")
+    feature_recommendations: str = Field(default="")
     problem_description: str = Field(default="")
     dataset_path: str = Field(default="./ongoging/train.csv")
     test_dataset_path: str = Field(default="./ongoging/test.csv")
@@ -44,14 +45,16 @@ class KaggleProblemState(BaseModel):
     def get_future_tasks(self):
         i = self.index + 1
         tasks = self.planned_tasks[i:]
-        return "".join([f"- {self.index +ind+1}. {i}\n" for ind, i in enumerate(tasks)])
+        return "".join(
+            [f"- {self.index + ind + 1}. {i}\n" for ind, i in enumerate(tasks)]
+        )
 
     def get_executed_tasks(self) -> str:
         index = self.index + 1
         tasks = self.planned_tasks[:index]
         output_str = "** Number of executed tasks: ** \n "
         for ind, i in enumerate(tasks):
-            output_str += f"- {ind+1}. {i}\n"
+            output_str += f"- {ind + 1}. {i}\n"
         return "NO Task Executed" if index <= 0 else output_str
 
     def __str__(self) -> str:

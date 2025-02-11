@@ -10,7 +10,6 @@ from jupyter_client import KernelManager
 from nbformat.v4 import new_code_cell, new_notebook, new_output
 
 from utils import CellError, CellResult, NotebookExecutorInterface
-from jupyter_client import KernelManager
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -84,7 +83,7 @@ class JupyterExecutor(NotebookExecutorInterface):
 
         while True:
             try:
-                msg = self.kc.get_iopub_msg(timeout=180)
+                msg = self.kc.get_iopub_msg(timeout=600)
                 if msg["parent_header"].get("msg_id") == msg_id:
                     if msg["msg_type"] == "stream":
                         output = msg["content"]["text"]

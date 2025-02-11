@@ -6,7 +6,6 @@ import zipfile
 import logging
 from unittest.mock import MagicMock
 
-import httpx
 from kaggle.api.kaggle_api_extended import KaggleApi
 from kaggle.rest import ApiException
 from langchain.output_parsers import PydanticOutputParser
@@ -58,12 +57,8 @@ class ScrapeKaggle:
         )
         self.config = config
         self.mongo_dict = {}
-        http_client = None
-        # if proxy:
-        # http_client = httpx.Client(proxy=proxy)
         self.llm = ChatOpenAI(
             model="gpt-4o",
-            # http_client=http_client,
             temperature=0,
         )
 

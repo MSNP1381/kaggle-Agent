@@ -8,8 +8,7 @@ CHALLENGE_DESCRIPTION_PROMPT = [
 3. Any unique aspects or constraints of the challenge
 4. Key information that would be relevant for developing a solution
 
-**write your output in just one paragraph.**
-""",
+**write your output in just one paragraph. and keep it as short as possible**""",
     ),
     ("user", "Challenge description:\n\n```markdown\n{{text}}\n```"),
 ]

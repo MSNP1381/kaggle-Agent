@@ -82,33 +82,26 @@ Updated Summary:
 
 
 class WeightedMemory:
-
     def __init__(self, max_items=5):
-
         self.memories: List[Tuple[str, float]] = []
 
         self.max_items = max_items
 
     def add_memory(self, text: str, importance: float = 1.0):
-
         self.memories.append((text, importance))
 
         self.memories.sort(key=lambda x: x[1], reverse=True)
 
         if len(self.memories) > self.max_items:
-
             self.memories = self.memories[: self.max_items]
 
     def get_memories(self) -> str:
-
         return "\n".join([memory[0] for memory in self.memories])
 
 
 class MemoryAgent:
-
     @inject
     def __init__(self, llm: ChatOpenAI, mongo):
-
         self.task_results_dict = {}
 
         self.docs_retriever = None
@@ -140,13 +133,11 @@ class MemoryAgent:
         self.qa_chain = self._create_qa_chain()
 
     def _create_qa_chain(self):
-
         return ConversationalRetrievalChain.from_llm(
             self.llm, self.long_term_memory.as_retriever(), return_source_documents=True
         )
 
     def update_summary(self, task: str, code: str, result: str):
-
         prompt = UPDATE_SUMMARY_PROMPT.format(
             current_summary=self.results_summary, task=task, code=code, result=result
         )
@@ -203,7 +194,6 @@ class MemoryAgent:
         """
 
         try:
-
             # Ensure the examples are in Chroma
 
             self._ensure_examples_in_chroma()
@@ -226,7 +216,6 @@ class MemoryAgent:
             ]
 
         except Exception:
-
             return []
 
     def _ensure_examples_in_chroma(self):
@@ -236,7 +225,6 @@ class MemoryAgent:
         """
 
         if not hasattr(self, "examples_vectorstore"):
-
             # Initialize Chroma for examples if it doesn't exist
 
             self.examples_vectorstore = Chroma(
@@ -246,7 +234,6 @@ class MemoryAgent:
             # Add all examples from MongoDB to Chroma
 
             for example in self.examples_collection.find():
-
                 self.examples_vectorstore.add_texts(
                     texts=[example["task"]],
                     metadatas=[{"source": "examples"}],
@@ -254,7 +241,6 @@ class MemoryAgent:
                 )
 
     def init_doc_retrieve(self):
-
         documents = state2retrieve_doc()
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -272,7 +258,6 @@ class MemoryAgent:
         self.docs_retriever = self.docs_vectorstore.as_retriever()
 
         def format_docs(docs):
-
             return "\n\n".join(doc.page_content for doc in docs)
 
         self.docs_rag_chain = (
@@ -286,17 +271,14 @@ class MemoryAgent:
         )
 
     def ask_docs(self, question):
-
         self.docs_rag_chain.invoke(question)
 
     def ask(self, question: str, doc_type: Optional[str] = None) -> str:
-
         context = self.short_term_memory.get_memories()
 
         full_question = f"Context: {context}\n\nQuestion: {question}"
 
         if doc_type:
-
             retriever = self.long_term_memory.as_retriever(
                 search_kwargs={"filter": {"doc_type": doc_type}}
             )
@@ -308,7 +290,6 @@ class MemoryAgent:
             result = qa_chain({"question": full_question})
 
         else:
-
             result = self.qa_chain({"question": full_question})
 
         self.short_term_memory.add_memory(f"Q: {question}\nA: {result['answer']}")
@@ -318,9 +299,7 @@ class MemoryAgent:
     def add_document(
         self, content: str, doc_type: str, metadata: Optional[Dict] = None
     ) -> str:  # Changed return type to str
-
         if metadata is None:
-
             metadata = {}
 
         metadata["doc_type"] = doc_type
@@ -340,13 +319,11 @@ class MemoryAgent:
     def load_document(
         self, doc_id: str
     ) -> Union[Dict, None]:  # Changed parameter type to str
-
         # Retrieve the document from Chroma
 
         results = self.long_term_memory.get([doc_id])
 
         if results and results["documents"]:
-
             return {
                 "content": results["documents"][0],
                 "doc_type": results["metadatas"][0]["doc_type"],
@@ -356,37 +333,30 @@ class MemoryAgent:
         return None
 
     def add_to_short_term_memory(self, text: str, importance: float = 1.0):
-
         self.short_term_memory.add_memory(text, importance)
 
     def search_documents(
         self, query: str, doc_type: Optional[str] = None, k: int = 5
     ) -> List[Document]:
-
         if doc_type:
-
             return self.long_term_memory.similarity_search(
                 query, k=k, filter={"doc_type": doc_type}
             )
 
         else:
-
             return self.long_term_memory.similarity_search(query, k=k)
 
     def list_documents(self, doc_type: Optional[str] = None) -> List[Dict]:
-
         # This method needs to be implemented differently for Chroma
 
         # As Chroma doesn't have a direct method to list all documents, we'll need to use a workaround
 
         if doc_type:
-
             results = self.long_term_memory.similarity_search(
                 "", filter={"doc_type": doc_type}, k=1000
             )
 
         else:
-
             results = self.long_term_memory.similarity_search("", k=1000)
 
         return [
@@ -402,7 +372,6 @@ class MemoryAgent:
 # Usage example
 
 if __name__ == "__main__":
-
     agent = MemoryAgent(
         api_key="your-openai-api-key",
         mongo_uri="your-mongodb-uri",
@@ -435,7 +404,6 @@ if __name__ == "__main__":
     loaded_doc = agent.load_document(doc1_id)
 
     if loaded_doc:
-
         print(f"Loaded document type: {loaded_doc['doc_type']}")
 
     # Ask questions about specific document types

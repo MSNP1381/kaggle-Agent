@@ -2,21 +2,6 @@
 DATASET_ANALYSIS_PROMPT = """
 You are an expert data scientist tasked with analyzing a dataset for a Kaggle machine learning competition. Your goal is to provide a comprehensive analysis of the dataset and suggest potential feature engineering and preprocessing steps.
 
-**Input:**
-```
-{data_initial_info}
-```
-
-**Dataset Overview:**
-```
-{dataset_overview}
-```
-
-**Dataset First Few Rows:**
-```
-{dataset_head}
-```
-
 In your analysis:
 1. For the quantitative analysis:
    - Describe the dataset's size, structure, and basic statistics.
@@ -42,6 +27,22 @@ Ensure your analysis is thorough, insightful, and directly applicable to the mac
 - Ensure all analysis is thorough and based on the provided data.
 - Follow the format instructions strictly.
 - Do not introduce any assumptions beyond the provided data.
+
+
+**Dataset Overview:**
+```
+{dataset_overview}
+```
+
+**Input:**
+```
+{data_initial_info}
+```
+
+**Dataset First Few Rows:**
+```
+{dataset_head}
+```
 
 Notes:
 - always follow column names from dataset head and dataset overview as it is.dont use any extra spaces ot uppercase or extra formatting

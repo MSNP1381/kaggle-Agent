@@ -169,6 +169,7 @@ def state2doc_write(state) -> str:
         "problem_description": state.problem_description,
         "quantitative_analysis": state.quantitative_analysis,
         "qualitative_analysis": state.qualitative_analysis,
+        "feature_recommendations": state.feature_recommendations,
         "dataset_info": state.dataset_info,
         "evaluation": state.evaluation_metric,
         "important_notes": important_notes,

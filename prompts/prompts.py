@@ -20,5 +20,8 @@ Your plan should be problem-specific and adhere to the emerald workflow problem 
 {qualitative_analysis}
 </ANALYSIS.QUALITATIVE>
 
+<ANALYSIS.FEATURE_RECOMMENDATIONS>
+{feature_recommendations}
+</ANALYSIS.FEATURE_RECOMMENDATIONS>
 """
 )

@@ -1,51 +1,23 @@
 
+### Goal
 
-Submissions are evaluated using [F1](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html) between the predicted and expected answers.
+It is your job to predict the sales price for each house. For each Id in the test set, you must predict the value of the SalePrice variable.
 
-F1 is calculated as follows:  
+### Metric
 
-$$  
+Submissions are evaluated on [Root-Mean-Squared-Error (RMSE)](https://en.wikipedia.org/wiki/Root-mean-square_deviation) between the logarithm of the predicted value and the logarithm of the observed sales price. (Taking logs means that errors in predicting expensive houses and cheap houses will affect the result equally.)
 
-F\_1 = 2 \* \frac{precision \* recall}{precision + recall}  
+### Submission File Format
 
-$$
+The file should contain a header and have the following format:
 
-where:
+```
+Id,SalePrice  
+1461,169000.1  
+1462,187724.1233  
+1463,175221  
+etc.
+```
 
-$$  
-
-precision = \frac{TP}{TP + FP}  
-
-$$
-
-$$  
-
-recall = \frac{TP}{TP + FN}  
-
-$$
-
-and:
-
-> True Positive [TP] = your prediction is 1, and the ground truth is also 1 - you predicted a *positive* and that's *true*!  
-> 
-> False Positive [FP] = your prediction is 1, and the ground truth is 0 - you predicted a *positive*, and that's *false*.  
-> 
-> False Negative [FN] = your prediction is 0, and the ground truth is 1 - you predicted a *negative*, and that's *false*.
-
-Submission File
----------------
-
-For each ID in the test set, you must predict 1 if the tweet is describing a real disaster, and 0 otherwise. The file should contain a header and have the following format:
-
-> id,target  
-> 
-> 0,0  
-> 
-> 2,0  
-> 
-> 3,1  
-> 
-> 9,0  
-> 
-> 11,0
+You can download an example submission file (sample\_submission.csv) on the [Data page.](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data)
 

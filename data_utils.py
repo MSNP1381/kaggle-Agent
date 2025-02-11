@@ -20,6 +20,9 @@ class DatasetAnalysis(BaseModel):
     qualitative_analysis: str = Field(
         description="Detailed qualitative analysis of the dataset"
     )
+    feature_recommendations: str = Field(
+        description="Recommendations for feature engineering and preprocessing"
+    )
 
 
 class DataUtils:
@@ -91,6 +94,7 @@ class DataUtils:
             "dataset_info": analysis_result,
             "quantitative_analysis": result.quantitative_analysis,
             "qualitative_analysis": result.qualitative_analysis,
+            "feature_recommendations": result.feature_recommendations,
         }
 
         # Write result back to MongoDB if available
