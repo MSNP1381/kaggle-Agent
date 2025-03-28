@@ -1,6 +1,6 @@
-# Kaggale agent Iter #1: KagGooLY
+# Kaggle agent Iter #1: KagGooLY
 
-> Note that because of nature of project it could be very dependant to iterarions and no plan is strait forward for this type of projects.
+> Note that because of nature of project it could be very dependent to iterations and no plan is straight forward for this type of projects.
 
 ---
 
@@ -9,7 +9,7 @@
 - [ ] add visual management system 📊
 - [ ] back to the future ⏰⬅️🚗 <small>add time travel to memory system and agent</small>
 - [ ] **nerds with needles 🤓💉** <small>knowledge injection</small>
-- [ ] <b>Assembly of philosophers and a chalice(🤔)\*🥛 </b> <small>agent orchestration</small>
+- [ ] <b>Assembly of philosophers and a chalice (🤔)\*🥛 </b> <small>agent orchestration</small>
 
 ## 🌟 Overview
 
