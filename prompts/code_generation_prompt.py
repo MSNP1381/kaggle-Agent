@@ -11,7 +11,7 @@ IMPROVED_CODE_GEN_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            """
+            """\
 You are a Kaggle grandmaster expert in machine learning and data science. Your task is to generate high quality python code for the given task
 You are in a jupyter notebook environment, Generate python code for the notebook cell according to the provided task.
 Pay attention to previous codes and for new cell continue integrity of code and solution.
@@ -57,8 +57,7 @@ Note : ** Please skip visualization and using plots**
 
 {current_task}
 
-</CurrentTask>
-""",
+</CurrentTask>""",
         ),
     ]
 ).partial(pkg_str=pkg_str)
