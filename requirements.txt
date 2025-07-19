@@ -371,8 +371,8 @@ pyarrow==17.0.0
 pyarrow==17.0.0
 pyarrow @ file:///croot/pyarrow_1721664224170/work/python
 pyarrow-hotfix==0.6
-pyautogen==0.2.35
-pyautogen==0.2.35
+ag2==0.2.35
+ag2==0.2.35
 pycodestyle==2.12.1
 pycparser==2.22
 pycparser==2.22
